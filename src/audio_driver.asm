@@ -11,6 +11,8 @@ M_wait_for_busy_clear: macro
     bne.b  @wait_for_busy_clear\@
     endm
 
+    include 'instrument_defs.asm'
+
     ;top-level function for the audio driver
     ;this is the entry point for this 'module'
 audio_driver:
