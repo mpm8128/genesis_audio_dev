@@ -28,7 +28,7 @@ INT_VInterrupt:
     move.w  #2700, sr       ;disable interrupts
     MOVEM.l A6/A5/A4/A3/A2/A1/A0/D7/D6/D5/D4/D3/D2/D1/D0, -(A7) ;push everything to the stack
     
-    jmp indirect_audio_driver
+    jsr indirect_audio_driver
     
     MOVEM.l	(A7)+, D0/D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5
     move.w  #2300, sr

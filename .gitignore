@@ -3,3 +3,4 @@
 tools/asm68k.exe
 build/out.*
 build/errors.txt
+*.lnk

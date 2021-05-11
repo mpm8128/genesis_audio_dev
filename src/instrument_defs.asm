@@ -19,7 +19,7 @@
     ;F - 3-bit ch3 supplementary frequency MSB
     ;dc.b    ch3_f_msb
     
-
+size_operator_data  equ 6
 M_Define_Operator: macro det_mul,tl,rs_ar,am_d1r,d2r,sl_rr
     ;0x30 - xDDD MMMM
     ;D - 3-bit fine-grained detune
@@ -52,8 +52,9 @@ M_Define_Operator: macro det_mul,tl,rs_ar,am_d1r,d2r,sl_rr
     ;0x90 - xxxx SSSS
     ;S - 4-bit SSG-EG (unused)
     ;dc.b    \ssg_eg
-    endm
+    endm ;M_Define_Operator
 
+size_instrument_data    equ (size_operator_data*4) + 2
 M_Define_Instrument: macro  op1_det_mul,op1_tl,op1_rs_ar,op1_am_d1r,op1_d2r,op1_sl_rr,&
                             op2_det_mul,op2_tl,op2_rs_ar,op2_am_d1r,op2_d2r,op2_sl_rr,&
                             op3_det_mul,op3_tl,op3_rs_ar,op3_am_d1r,op3_d2r,op3_sl_rr,&
@@ -76,4 +77,28 @@ M_Define_Instrument: macro  op1_det_mul,op1_tl,op1_rs_ar,op1_am_d1r,op1_d2r,op1_
     ;F - 3-bit LFO frequency modulation level
     dc.b    \lr_amfm
     
-    endm
+    endm ;M_Define_Instrument
+    
+Inst_test_organ_0:
+    ;       op1   op2   op3   op4 
+    dc.b    0x22, 0x33, 0x54, 0x61, &   ;det_mul
+            0x12, 0x12, 0x12, 0x12, &   ;tl
+            0x00, 0x00, 0x00, 0x00, &   ;rs_ar
+            0x10, 0x10, 0x10, 0x10, &   ;am_d1r
+            0x1F, 0x1F, 0x1F, 0x1F, &   ;d2r
+            0xF0, 0xF0, 0xF0, 0xF0, &   ;sl_rr
+            0x1F, &                     ;fb_alg
+            0xC0                        ;lr_amfm
+    
+Inst_test_organ_1:
+    ;       op1   op2   op3   op4 
+    dc.b    0x22, 0x33, 0x54, 0x61, &   ;det_mul
+            0x7F, 0x7F, 0x00, 0x00, &   ;tl
+            0x00, 0x00, 0x00, 0x00, &   ;rs_ar
+            0x10, 0x10, 0x10, 0x10, &   ;am_d1r
+            0x1F, 0x1F, 0x1F, 0x1F, &   ;d2r
+            0xF0, 0xF0, 0xF0, 0xF0, &   ;sl_rr
+            0x1F, &                     ;fb_alg
+            0xC0                        ;lr_amfm
+    
+    even
