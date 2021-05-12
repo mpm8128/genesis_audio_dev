@@ -1,58 +1,149 @@
     include 'vector_table.asm'
     include 'header.asm'
+
+;==============================================================
+; VRAM WRITE MACROS
+;==============================================================
+; Some utility macros to help generate addresses and commands for
+; writing data to video memory, since they're tricky (and
+; error prone) to calculate manually.
+; The resulting command and address is written to the VDP's
+; control port, ready to accept data in the data port.
+;==============================================================
+	
+; Set the VRAM (video RAM) address to write to next
+SetVRAMWrite: macro addr
+	move.l  #(vdp_cmd_vram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
+	endm
+	
+; Set the CRAM (colour RAM) address to write to next
+SetCRAMWrite: macro addr
+	move.l  #(vdp_cmd_cram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
+	endm
+	
+; Set the VSRAM (vertical scroll RAM) address to write to next
+SetVSRAMWrite: macro addr
+	move.l  #(vdp_cmd_vsram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
+	endm
+
+M_enable_interrupts: macro
+    move.w  #0x2300, sr
+    endm
+
+M_disable_interrupts: macro
+    move.w  #0x2700, sr 
+    endm
     
-code_start:                 ;entry point
-    jsr VDP_WriteTMSS       ;Write the TMSS signature for rev1+ hardware
-    jsr VDP_LoadRegisters   ;Setup initial VDP state
-    jsr Clear_VRAM          ;wipe VRAM
+;==============================================================
+; CODE ENTRY POINT
+;==============================================================
+code_start:
+    M_disable_interrupts    
+    jsr setup_poweron       ;do setup
+    M_enable_interrupts    
     
-    ;   "hello world" section
-    jsr test_tiles          ;testing tile printing
+    jsr demo_init           ;initialize demo code
 
 @loop_forever
-    move.w  #0x2300, sr     ;enable interrupts
+    M_enable_interrupts    
     jmp @loop_forever       ;loop forever
     
+
+;==============================================================
+;   Power-on Setup subroutine  
+;==============================================================
+setup_poweron:
+	jsr     VDP_WriteTMSS       ; Write the TMSS signature (for hardware rev 1+ Mega Drive)
+	jsr     VDP_LoadRegisters   ; Load the initial VDP registers
+	;jsr    PAD_InitPads        ; Initialise gamepads
+	jsr     PSG_Init            ; Initialise the PSG (mutes all channels)
+    jsr     clear_vram          ;zero'es out VRAM
+    rts  
+  
+;==============================================================
+;   Demo initialization
+;==============================================================
+demo_init:
+    jsr demo_psg_init
+    jsr demo_tiles_init
+    rts
+
+;==============================================================
+;   demo_psg_init
+;   demonstrates basic PSG by playing a note
+;==============================================================
+demo_psg_init:
+	; Initialise PSG values in RAM
+	move.b #initial_psg_vol, ram_psg0_volume
+	move.w #initial_psg_freq, ram_psg1_frequency
+
+	; Set PSG channel 0 frequency
+    move.w  #10, d1  ;d1 = "A#"
+    move.w  #3, d2  ;d2 = octave 3
+    ;move.w  #33, d1
+    jsr get_psg_freq_from_note_name_and_octave
+    move.w d0, d1   ;d1 = calculated_frequency
+	
+    move.b #0x0, d0                 ;channel
+	;move.b #initial_psg_freq, d1    
+	jsr    PSG_SetFrequency
+
+	; Set PSG channel 0 volume
+	move.b #0x0, d0
+	move.b #initial_psg_vol, d1
+	jsr    PSG_SetVolume
+    rts
     
-    ;
-    ;
-    ;
-INT_Null:                   ;
-CPU_Exception:              ;halt for unhandled exceptions
-    stop    #0x2700
-    
-INT_HInterrupt:             ;HBLANK interrupt - just return for now    
-    rte
-    
-INT_VInterrupt:             
-    move.w  #2700, sr       ;disable interrupts
-    MOVEM.l A6/A5/A4/A3/A2/A1/A0/D7/D6/D5/D4/D3/D2/D1/D0, -(A7) ;push everything to the stack
-    
-    jsr indirect_audio_driver
-    
-    MOVEM.l	(A7)+, D0/D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5
-    move.w  #2300, sr
-    rte
-    
-    include 'defs.asm'
-    include 'tile_test.asm'
-    
-test_tiles:
+;==============================================================
+;   demo_tiles_init
+;   demonstrates basic tile display
+;==============================================================
+demo_tiles_init:
     lea test_palette, a0        ;
     jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
-
+    
 	; Write the font glyph tiles to VRAM
 	lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
     jsr Copy_Tiles_to_VRAM
-
+    
     ; Write tile positions to plane A VRAM
 	SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
 	move.w #tile_id_blank, vdp_data		; 
 	move.w #tile_id_garb, vdp_data		; 
-
     rts
     
-    ;copies tile in A0 to VRAM
+;==============================================================
+; INTERRUPT ROUTINES
+;==============================================================
+
+; Vertical interrupt - run once per frame (50hz in PAL, 60hz in NTSC)
+INT_VInterrupt:
+    addi.l  #1, ram_frame_counter
+    rte
+
+; Horizontal interrupt - run once per N scanlines (N = specified in VDP register 0xA)
+INT_HInterrupt:
+	; Doesn't do anything in this demo
+	rte
+
+; Exception interrupt - called if an error has occured
+CPU_Exception:
+	; Just halt the CPU if an error occurred
+	stop   #0x2700
+    
+; NULL interrupt - for interrupts we don't care about
+INT_Null:
+	rte
+    
+    include 'defs.asm'
+    include 'tile_test.asm'
+    include 'mem_map.asm'
+
+;==============================================================
+;   Copy_Tiles_to_VRAM
+;parameters:    a0 - pointer to tiles   
+;   copies tiles in A0 to vram
+;==============================================================
 Copy_Tiles_to_VRAM:
     SetVRAMWrite vram_addr_tiles
 	move.w #(size_tile_l*tile_count)-1, d0		; Loop counter = 8 longwords per tile * num tiles (-1 for DBRA loop)
@@ -61,7 +152,11 @@ Copy_Tiles_to_VRAM:
 	dbf d0, @loop	                ; Decrement d0 and loop until finished (when d0 reaches -1)
     rts
     
-    ;copies palette in A0 to VRAM
+;==============================================================
+;   Copy_Palette_to_CRAM
+;parameters:    a0 - pointer to tiles   
+;   copies palette in A0 to cram
+;==============================================================
 Copy_Palette_to_CRAM:
     SetCRAMWrite    0x0000          ;write to CRAM address 0x0000
     move.w #size_palette_w-1, d0    ;d0 = (size of palette in words)-1
@@ -70,68 +165,54 @@ Copy_Palette_to_CRAM:
     dbf d0, @loop           ;next item
     rts
     
-    ;wipes all of VRAM
-Clear_VRAM:
-    SetVRAMWrite    0x0000                  ;write to VRAM address 0x0000
-    move.w #(0x00010000/size_word)-1, d0    ;D0 = (size of VRAM in words)-1
-@loop:                      ;loop top
-    move.w  #0x0, vdp_data  ;zero this word
-    dbf d0, @loop           ;next word
-    rts                     
-    
-    ;
+;==============================================================
+; Clear VRAM (video memory)
+;==============================================================
+clear_vram:
+	; Setup the VDP to write to VRAM address 0x0000 (start of VRAM)
+	SetVRAMWrite 0x0000
+
+	; Write 0's across all of VRAM
+	move.w #(0x00010000/size_word)-1, d0	; Loop counter = 64kb, in words (-1 for DBRA loop)
+	@ClrVramLp:								; Start of loop
+	move.w #0x0, vdp_data					; Write a 0x0000 (word size) to VRAM
+	dbra   d0, @ClrVramLp					; Decrement d0 and loop until finished (when d0 reaches -1)
+    rts
+
+;==============================================================
+;   VDP_WriteTMSS
+	; Poke the TMSS to show "LICENSED BY SEGA..." message and allow us to
+	; access the VDP (or it will lock up on first access).
+;==============================================================
 VDP_WriteTMSS:
-
-	; The TMSS (Trademark Security System) locks up the VDP if we don't
-	; write the string 'SEGA' to a special address. This was to discourage
-	; unlicensed developers, since doing this displays the "LICENSED BY SEGA
-	; ENTERPRISES LTD" message to screen (on Mega Drive models 1 and higher).
-	;
-	; First, we need to check if we're running on a model 1+, then write
-	; 'SEGA' to hardware address 0xA14000.
-
 	move.b hardware_ver_address, d0			; Move Megadrive hardware version to d0
 	andi.b #0x0F, d0						; The version is stored in last four bits, so mask it with 0F
 	beq    @SkipTMSS						; If version is equal to 0, skip TMSS signature
 	move.l #tmss_signature, tmss_address	; Move the string "SEGA" to 0xA14000
-	@SkipTMSS:
-
+@SkipTMSS:
 	; Check VDP
 	move.w vdp_control, d0					; Read VDP status register (hangs if no access)
-	
 	rts
-    
+
+;==============================================================
+;   VDP_LoadRegisters
+;==============================================================
 VDP_LoadRegisters:
-
-	; To initialise the VDP, we write all of its initial register values from
-	; the table at the top of the file, using a loop.
-	;
-	; To write a register, we write a word to the control port.
-	; The top bit must be set to 1 (so 0x8000), bits 8-12 specify the register
-	; number to write to, and the bottom byte is the value to set.
-	;
-	; In binary:
-	;   100X XXXX YYYY YYYY
-	;   X = register number
-	;   Y = value to write
-
 	; Set VDP registers
 	lea    VDPRegisters, a0		; Load address of register table into a0
 	move.w #0x18-1, d0			; 24 registers to write (-1 for loop counter)
 	move.w #0x8000, d1			; 'Set register 0' command to d1
-
-	@CopyRegLp:
+@CopyRegLp:
 	move.b (a0)+, d1			; Move register value from table to lower byte of d1 (and post-increment the table address for next time)
 	move.w d1, vdp_control		; Write command and value to VDP control port
 	addi.w #0x0100, d1			; Increment register #
 	dbra   d0, @CopyRegLp		; Decrement d0, and jump back to top of loop if d0 is still >= 0
-	
 	rts
     
-indirect_audio_driver:
-    jmp audio_driver
+    include 'psg_helper_functions.asm'
     
-    include 'audio_driver.asm'
+    ;include 'audio_driver.asm'
+
 
 ; A label defining the end of ROM so we can compute the total size.
 ROM_End:

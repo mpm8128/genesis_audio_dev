@@ -38,9 +38,6 @@ VDPRegisters:
 ;==============================================================
 ; CONSTANTS
 ;==============================================================
-; Defines names for commonly used values and addresses to make
-; the code more readable.
-;==============================================================
 	
 ; VDP port addresses
 vdp_control				equ 0x00C00004
@@ -49,12 +46,21 @@ vdp_data				equ 0x00C00000
 ; VDP commands
 vdp_cmd_vram_write		equ 0x40000000
 vdp_cmd_cram_write		equ 0xC0000000
+vdp_cmd_vsram_write		equ 0x40000010
 
 ; VDP memory addresses
-; according to VDP registers 0x2 and 0x4 (see table above)
+; according to VDP registers 0x2, 0x4, 0x5, and 0xD (see table above)
 vram_addr_tiles			equ 0x0000
 vram_addr_plane_a		equ 0xC000
 vram_addr_plane_b		equ 0xE000
+vram_addr_sprite_table	equ 0xF000
+vram_addr_hscroll		equ 0xFC00
+
+; PSG port address (accessible from 68000)
+; The PSG can be accessed from both the 68000 and the Z80, although each has its own
+; address from which to do so.
+; We'll be accessing the PSG from the 68000 only in this demo for simplicity.
+psg_control				equ 0x00C00011	; NEW in this demo - address of PSG control port
 
 ; Screen width and height (in pixels)
 vdp_screen_width		equ 0x0140
@@ -65,12 +71,40 @@ vdp_screen_height		equ 0x00F0
 vdp_plane_width			equ 0x40
 vdp_plane_height		equ 0x20
 
+; The size of the sprite plane (512x512 pixels)
+vdp_sprite_plane_width	equ 0x0200
+vdp_sprite_plane_height	equ 0x0200
+
+; The sprite border (invisible area left + top) size
+vdp_sprite_border_x		equ 0x80
+vdp_sprite_border_y		equ 0x80
+
 ; Hardware version address
 hardware_ver_address	equ 0x00A10001
 
 ; TMSS
 tmss_address			equ 0x00A14000
 tmss_signature			equ 'SEGA'
+
+; Gamepad/IO port addresses
+pad_ctrl_a				equ 0x00A10009	; IO port A control port
+pad_ctrl_b				equ 0x00A1000B	; IO port B control port
+pad_data_a				equ 0x00A10003	; IO port A data port
+pad_data_b				equ 0x00A10005	; IO port B data port
+
+; Pad read latch, for fetching second byte from data port
+pad_byte_latch			equ 0x40
+
+; Gamepad button bits
+pad_button_up			equ 0x0
+pad_button_down			equ 0x1
+pad_button_left			equ 0x2
+pad_button_right		equ 0x3
+pad_button_a			equ 0xC
+pad_button_b			equ 0x4
+pad_button_c			equ 0x5
+pad_button_start		equ 0xD
+pad_button_all			equ 0x303F
 
 ; The size of a word and longword
 size_word				equ 2
@@ -90,6 +124,10 @@ size_tile_l				equ size_tile_b/size_long
 text_pos_x				equ 0x08
 text_pos_y				equ 0x04
 
+; Initial PSG values
+initial_psg_vol			equ 0x08 ; (half volume)
+initial_psg_freq		equ 0xFE ; (440hz)
+
 test_palette:
 	dc.w 0x0000	; Colour 0 = Transparent
 	dc.w 0x0000	; Colour 1 = Black
@@ -108,26 +146,6 @@ test_palette:
 	dc.w 0x003A
 	dc.w 0x0A30
 
-;==============================================================
-; VRAM WRITE MACROS
-;==============================================================
-; Some utility macros to help generate addresses and commands for
-; writing data to video memory, since they're tricky (and
-; error prone) to calculate manually.
-; The resulting command and address is written to the VDP's
-; control port, ready to accept data in the data port.
-;==============================================================
-	
-; Set the VRAM (video RAM) address to write to next
-SetVRAMWrite: macro addr
-	move.l  #(vdp_cmd_vram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
-	endm
-	
-; Set the CRAM (colour RAM) address to write to next
-SetCRAMWrite: macro addr
-	move.l  #(vdp_cmd_cram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
-	endm
-	
 ;==============================================================
 ; TILE IDs
 ;==============================================================

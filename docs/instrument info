@@ -1,0 +1,33 @@
+;alg:   7
+;fb:    3
+;fb_alg:    0001 1111
+;fb_alg:    0x1F
+
+;lfo    off
+;
+
+;operator 1
+det_mul ,tl ,rs_ar  ,am_d1r ,d2r    ,sl_rr
+
+;dtn    2
+;mul    2
+;det_mul:   0010 00010
+;det_mul:   0x22
+
+;tl     127-109
+;tl:        0x12
+
+;rs:    0
+;ar:    0
+;rs_ar:     0x00
+
+;am:    0
+;d1:    16
+;am_d1r:    0x10
+
+;d2:    31
+;d2r:       0x1F
+
+;sl:    15
+;rr:    0
+;sl_rr:     0xF0
