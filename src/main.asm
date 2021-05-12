@@ -58,13 +58,27 @@ setup_poweron:
 	;jsr    PAD_InitPads        ; Initialise gamepads
 	jsr     PSG_Init            ; Initialise the PSG (mutes all channels)
     jsr     clear_vram          ;zero'es out VRAM
+    jsr     init_z80
     rts  
+
+;==============================================================
+;   init z80
+;   halts the z80 so we can use the FM chip
+;==============================================================
+init_z80:
+    move.w	#$100,($A11100).l	;Stop the Z80
+    move.w	#$100,($A11200).l	;Reset the Z80
+@wait_for_z80:
+    btst	#0,($A11100).l
+    bne	@wait_for_z80           ;Wait for z80 to halt
+    rts
   
 ;==============================================================
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    jsr demo_psg_init
+    ;jsr demo_psg_init
+    jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -111,6 +125,8 @@ demo_tiles_init:
 	move.w #tile_id_blank, vdp_data		; 
 	move.w #tile_id_garb, vdp_data		; 
     rts
+    
+
     
 ;==============================================================
 ; INTERRUPT ROUTINES
@@ -209,9 +225,7 @@ VDP_LoadRegisters:
 	dbra   d0, @CopyRegLp		; Decrement d0, and jump back to top of loop if d0 is still >= 0
 	rts
     
-    include 'psg_helper_functions.asm'
-    
-    ;include 'audio_driver.asm'
+    include 'audio_driver.asm'
 
 
 ; A label defining the end of ROM so we can compute the total size.
