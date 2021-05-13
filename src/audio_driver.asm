@@ -153,7 +153,15 @@ stream_psg_stop:
 ;       l   pointer    
 ;==============================================================
 stream_psg_loop:
-    ;TODO
+    move.w  a4, d6
+    btst    #0, d6          ;check if stream ptr is odd or even
+    beq     @word_aligned   ;
+    tst.b   (a4)+           ;align that bad boy
+@word_aligned:
+    ;move new stream location to channel struct
+    move.l  (a4), psg_ch_stream_ptr(a5)
+    move.l  psg_ch_stream_ptr(a5), a4
+
     bra read_psg_stream
 
 ;==============================================================
