@@ -40,7 +40,6 @@ M_disable_interrupts: macro
 code_start:
     M_disable_interrupts    
     jsr setup_poweron       ;do setup
-    M_enable_interrupts    
     
     jsr demo_init           ;initialize demo code
 
@@ -48,7 +47,6 @@ code_start:
     M_enable_interrupts    
     jmp @loop_forever       ;loop forever
     
-
 ;==============================================================
 ;   Power-on Setup subroutine  
 ;==============================================================
@@ -77,8 +75,8 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    ;jsr demo_psg_init
-    jsr demo_fm_init
+    jsr demo_psg_init
+    ;jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -87,26 +85,37 @@ demo_init:
 ;   demonstrates basic PSG by playing a note
 ;==============================================================
 demo_psg_init:
-	; Initialise PSG values in RAM
-	;move.b #initial_psg_vol, ram_psg0_volume
-	;move.w #initial_psg_freq, ram_psg1_frequency
-
-	; Set PSG channel 0 frequency
-    move.w  #10, d1  ;d1 = "A#"
-    move.w  #3, d2  ;d2 = octave 3
-    ;move.w  #33, d1
-    jsr get_psg_freq_from_note_name_and_octave
-    move.w d0, d1   ;d1 = calculated_frequency
-	
-    move.b #0x0, d0                 ;channel
-	;move.b #initial_psg_freq, d1    
-	jsr    PSG_SetFrequency
-
-	; Set PSG channel 0 volume
-	move.b #0x0, d0
-	move.b #initial_psg_vol, d1
-	jsr    PSG_SetVolume
+    lea demo_psg_0, a0  ;stream data
+    lea ch_psg_0, a5    ;channel struct
+    
+    move.b  #1, psg_ch_is_enabled(a5)
+    move.b  #0, psg_ch_channel(a5)
+    move.l  a0, psg_ch_stream_ptr(a5)
+    
+    move.b  #0x0F, psg_ch_base_vol(a5)
+    move.b  #0, psg_ch_note_time(a5)
     rts
+
+	; ; Initialise PSG values in RAM
+	; ;move.b #initial_psg_vol, ram_psg0_volume
+	; ;move.w #initial_psg_freq, ram_psg1_frequency
+
+	; ; Set PSG channel 0 frequency
+    ; move.w  #10, d1  ;d1 = "A#"
+    ; move.w  #3, d2  ;d2 = octave 3
+    ; ;move.w  #33, d1
+    ; jsr get_psg_freq_from_note_name_and_octave
+    ; move.w d0, d1   ;d1 = calculated_frequency
+	
+    ; move.b #0x0, d0                 ;channel
+	; ;move.b #initial_psg_freq, d1    
+	; jsr    PSG_SetFrequency
+
+	; ; Set PSG channel 0 volume
+	; move.b #0x0, d0
+	; move.b #initial_psg_vol, d1
+	; jsr    PSG_SetVolume
+    ; rts
 
 ;============================================================================
 ;   demo_fm_init
@@ -145,7 +154,10 @@ demo_tiles_init:
 
 ; Vertical interrupt - run once per frame (50hz in PAL, 60hz in NTSC)
 INT_VInterrupt:
+    M_disable_interrupts
     addi.l  #1, ram_frame_counter
+    jsr audio_driver
+    M_enable_interrupts
     rte
 
 ; Horizontal interrupt - run once per N scanlines (N = specified in VDP register 0xA)

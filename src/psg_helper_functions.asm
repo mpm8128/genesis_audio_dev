@@ -14,20 +14,20 @@ psg_frequency_table:
 ;==============================================================
 ;   get_psg_freq_from_note_name_and_octave
 ;parameters:
-    ;   d1.w -> note name (0-11)
-    ;   d2.w -> octave (2-8)
+    ;   d6.w -> note name (0-11)
+    ;   d5.w -> octave (2-8)
 ;returns:
-    ;   d0 -> register value
+    ;   d1 -> register value
 ;==============================================================
 get_psg_freq_from_note_name_and_octave:
     lea     (psg_frequency_table), a0
-    subi.w  #2, d2                          ;octave# -> row offset
-    subi.w  #12, d1                         ;
+    subi.w  #1, d5                          ;octave# -> row offset
+    subi.w  #12, d6                         ;
 @calc_octave_offset:                        ;
-    addi.w  #12, d1                         ;note_offset = note_name + 12(octave - 2)
-    dbf     d2, @calc_octave_offset         ;
-    asl.w   #1, d1                          ;word-align
-    move.w  (a0, d1.w), d0 ;d0 = psg_frequency_table[note_offset]
+    addi.w  #12, d6                         ;note_offset = note_name + 12(octave - 2)
+    dbf     d5, @calc_octave_offset         ;
+    asl.w   #1, d6                          ;word-align
+    move.w  (a0, d6.w), d1 ;d1 = psg_frequency_table[note_offset]
     rts
 
 ;==============================================================
@@ -62,10 +62,10 @@ PSG_Init:
     
     ;"disable" all psg channels
     lea ch_psg_0, a5
-    move.b #3, d7
+    moveq   #3, d7
 @loop_disable_psg_ch:
     clr.b   psg_ch_is_enabled(a5)
-    adda.w  psg_ch_size, a5
+    adda.w  #psg_ch_size, a5
     dbf d7, @loop_disable_psg_ch
 	rts
 
