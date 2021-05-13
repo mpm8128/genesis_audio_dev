@@ -88,8 +88,8 @@ demo_init:
 ;==============================================================
 demo_psg_init:
 	; Initialise PSG values in RAM
-	move.b #initial_psg_vol, ram_psg0_volume
-	move.w #initial_psg_freq, ram_psg1_frequency
+	;move.b #initial_psg_vol, ram_psg0_volume
+	;move.w #initial_psg_freq, ram_psg1_frequency
 
 	; Set PSG channel 0 frequency
     move.w  #10, d1  ;d1 = "A#"
@@ -107,6 +107,17 @@ demo_psg_init:
 	move.b #initial_psg_vol, d1
 	jsr    PSG_SetVolume
     rts
+
+;============================================================================
+;   demo_fm_init
+;============================================================================
+demo_fm_init:
+    lea Inst_test_organ_0, A1
+    move.b  #0, d2              ;channel 0
+    jsr load_FM_instrument    
+    jsr set_FM_frequency
+    jsr keyon_FM_channel
+    rts    
     
 ;==============================================================
 ;   demo_tiles_init
