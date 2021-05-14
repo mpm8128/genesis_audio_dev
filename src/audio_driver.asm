@@ -63,7 +63,7 @@ handle_all_psg_channels:
                                     ;else
     jsr handle_psg_channel          ;   handle it
 @next_channel
-    adda.w  psg_ch_size, a5         ;next channel
+    adda.w  #psg_ch_size, a5         ;next channel
     dbf d7, @loop_psg_ch            ;loop end
     
     rts
@@ -139,7 +139,7 @@ stream_psg_stop:
     move.b  psg_ch_channel(a5), d0  ;d0 = channel number
     move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
     jsr     PSG_SetVolume           ;PSG_SetVolume(channel, 0)
-    bra     exit_psg_stream         ;cleanup and return
+    rts
 
 ;==============================================================
 ;   stream_psg_loop
