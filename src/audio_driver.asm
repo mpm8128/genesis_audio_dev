@@ -86,7 +86,7 @@ handle_psg_channel:
     beq     exit_psg_stream             ;if stream ptr == null, cleanup and return
     
 read_psg_stream:
-    clr.w   d6
+    clr.w   d6                          ;needs to be a clean slate for the cmp ahead
     lea     psg_stream_jumptable, a3    ;a3 = jumptable pointer
     move.b  (a4)+, d6       ;read code from stream
     cmp     num_sc, d6      ;if code# > number of codes
@@ -153,7 +153,7 @@ stream_psg_stop:
 ;       l   pointer    
 ;==============================================================
 stream_psg_loop:
-    move.w  a4, d6
+    move.w  a4, d6          ;copy address to d6 to compare
     btst    #0, d6          ;check if stream ptr is odd or even
     beq     @word_aligned   ;
     tst.b   (a4)+           ;align that bad boy
@@ -162,7 +162,7 @@ stream_psg_loop:
     move.l  (a4), psg_ch_stream_ptr(a5)
     move.l  psg_ch_stream_ptr(a5), a4
 
-    bra read_psg_stream
+    bra read_psg_stream     ;read more from stream
 
 ;==============================================================
 ;   stream_psg_keyon
@@ -196,7 +196,7 @@ stream_psg_keyon:
 
     move.b  (a4)+, psg_ch_note_time(a5)  ;set note duration
 
-    bra exit_psg_stream
+    bra exit_psg_stream                 ;cleanup and return
 
 ;==============================================================
 ;   stream_psg_keyoff
@@ -216,7 +216,7 @@ stream_psg_keyoff:
     
     move.b  (a4)+, psg_ch_note_time(a5)     ;set silence duration
 
-    bra exit_psg_stream
+    bra exit_psg_stream             ;cleanup and return
     
 ;==============================================================
 ;   stream codes
@@ -372,3 +372,4 @@ ch_psg_noise                rs.b    psg_ch_size
     
     
     include 'demo_song.asm'
+    include 'demo_agr_14.asm'

@@ -85,7 +85,7 @@ demo_init:
 ;   demonstrates basic PSG by playing a note
 ;==============================================================
 demo_psg_init:
-    lea demo_psg_0, a0  ;stream data
+    lea agr_14_ch0, a0  ;stream data
     lea ch_psg_0, a5    ;channel struct
     
     move.b  #1, psg_ch_is_enabled(a5)
@@ -95,7 +95,7 @@ demo_psg_init:
     move.b  #0x08, psg_ch_base_vol(a5)
     move.b  #0, psg_ch_note_time(a5)
     
-    lea demo_psg_1, a0
+    lea agr_14_ch1, a0
     lea ch_psg_1, a5
     
     move.b  #1, psg_ch_is_enabled(a5)
@@ -105,15 +105,15 @@ demo_psg_init:
     move.b  #0x08, psg_ch_base_vol(a5)
     move.b  #0, psg_ch_note_time(a5)
 
-    lea demo_psg_2, a0
-    lea ch_psg_2, a5
+    ; lea demo_psg_2, a0
+    ; lea ch_psg_2, a5
     
-    move.b  #1, psg_ch_is_enabled(a5)
-    move.b  #2, psg_ch_channel(a5)
-    move.l  a0, psg_ch_stream_ptr(a5)
+    ; move.b  #1, psg_ch_is_enabled(a5)
+    ; move.b  #2, psg_ch_channel(a5)
+    ; move.l  a0, psg_ch_stream_ptr(a5)
     
-    move.b  #0x08, psg_ch_base_vol(a5)
-    move.b  #0, psg_ch_note_time(a5)
+    ; move.b  #0x08, psg_ch_base_vol(a5)
+    ; move.b  #0, psg_ch_note_time(a5)
 
     rts
 
