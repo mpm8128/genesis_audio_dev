@@ -55,15 +55,11 @@ set_FM_frequency:
     lsr.w   #8, d1          ;shift msb down
     lsl.b   #3, d0          ;shift octave/block into place
     or.b    d0, d1          ;OR in octave/block
-
-    ;move.b  d2, d0          ;copy channel to d0
-    ;bclr    #2, d0          ;clear opn2 "side" bit
-    move.b  #0xA4, d0        ;d0 = freq_msb reg + channel
+    move.b  #0xA4, d0       ;d0 = freq_msb reg
     jsr write_register_opn2
-    
+
     move.b  d3, d1          ;d1 = freq_lsb
-    move.b  #0xA0, d0          ;d0 = (A4 - 4) + channel
-                            ;d0 = freq_lsb reg + channel
+    move.b  #0xA0, d0       ;d0 = freq_lsb reg
     jsr write_register_opn2
     rts
     
@@ -76,7 +72,7 @@ keyon_FM_channel:
     move.b  #$28, d0            ;d0 = keyon/off register
     move.b  d2, d1              ;d1 = channel
     ori.b   #$F0, d1            ;mask in keyon for all operators
-    jsr write_register_opn2_ctrl   ;write_register_opn2(d0, d1, d2) (register, data, channel)
+    jsr write_register_opn2_ctrl
     rts
     
 ;============================================================================
@@ -98,17 +94,13 @@ keyoff_FM_channel:
 ;   d2 = channel (0-2, 4-6)
 ;============================================================================
 load_FM_instrument:
-    move.w  #0x30, d0            ;d0 = start register for instrument parameters
-;    moveq   #5, d3                  ;d3 = number of parameters - 1    
-    move.w  #23, d3
+    move.w  #0x30, d0           ;d0 = start register for instrument parameters
+    move.w  #23, d3             ;d3 = num_parameters - 1
 @loop_each_parameter:               ;for each parameter (det_mul, tl, rs_ar, am_d1r, d2r, sl_rr)
-;    moveq   #3, d4              ;d4 = number of operators - 1
-;@loop_each_operator:            ;for each operator (0xY0, 0xY4, 0xY8, 0xYC)
     move.b  (a1)+, d1           ;d1 = data
     jsr write_register_opn2     ;write_register_opn2(d0, d1, d2) (register, data, channel)
     addi.b  #4, d0              ;next operator
     andi.b  #0xFC, d0
-;    dbf d4, @loop_each_operator ;end loop
     dbf d3, @loop_each_parameter    ;end loop
     move.b #$B0, d0             ;d0 = register for feedback/algorithm
     move.b (a1)+, d1
@@ -116,7 +108,6 @@ load_FM_instrument:
     move.b #$B4, d0             ;d0 = register for stereo/AM/FM sensitivity
     move.b (a1)+, d1
     jsr write_register_opn2     ;write_register_opn2(d0, d1, d2) (register, data, channel)
-
     rts
     
 ;============================================================================
@@ -127,7 +118,6 @@ load_FM_instrument:
 ;   d2 = channel (0-2 = side 1, 4-6 = side 2. CTRL uses channel 0)
 ;============================================================================
 write_register_opn2:
-    lea opn2_addr_1, a0
     btst	#2, d2          ;check bit to see which side of the 2612 to write to
     bne.b	setup_write_register_opn2_side2
     ;else fallthrough to side 1/ctrl
@@ -151,6 +141,7 @@ setup_write_register_opn2_side2:
     ;fallthrough to side 2
     
 write_register_opn2_side2:
+    lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, $2(a0)
     nop

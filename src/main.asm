@@ -177,7 +177,32 @@ demo_tiles_init:
     ; Write tile positions to plane A VRAM
 	SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
 	move.w #tile_id_blank, vdp_data		; 
-	move.w #tile_id_garb, vdp_data		; 
+	move.w #tile_id_a, vdp_data		; 
+    move.w #tile_id_b, vdp_data		; 
+    move.w #tile_id_c, vdp_data		; 
+    move.w #tile_id_d, vdp_data		; 
+    move.w #tile_id_e, vdp_data		; 
+    move.w #tile_id_f, vdp_data		
+    move.w #tile_id_g, vdp_data		
+    move.w #tile_id_h, vdp_data		
+    move.w #tile_id_i, vdp_data		
+    move.w #tile_id_j, vdp_data		
+    move.w #tile_id_k, vdp_data		
+    move.w #tile_id_l, vdp_data		
+    move.w #tile_id_m, vdp_data		
+    move.w #tile_id_n, vdp_data		
+    move.w #tile_id_o, vdp_data		
+    ; move.w #tile_id_p, vdp_data		
+    ; move.w #tile_id_q, vdp_data		
+    ; move.w #tile_id_r, vdp_data		
+    ; move.w #tile_id_s, vdp_data		
+    ; move.w #tile_id_t, vdp_data		
+    ; move.w #tile_id_u, vdp_data		
+    ; move.w #tile_id_v, vdp_data		
+    ; move.w #tile_id_w, vdp_data		
+    ; move.w #tile_id_x, vdp_data		
+    ; move.w #tile_id_y, vdp_data		
+    ; move.w #tile_id_z, vdp_data		
     rts
     
 
