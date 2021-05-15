@@ -75,8 +75,8 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    jsr demo_psg_init
-    ;jsr demo_fm_init
+    ;jsr demo_psg_init
+    jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -92,7 +92,7 @@ demo_psg_init:
     move.b  #0, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
     
-    move.b  #0x08, psg_ch_base_vol(a5)
+    move.b  #0x0A, psg_ch_base_vol(a5)
     move.b  #0, psg_ch_note_time(a5)
     
     lea agr_14_ch1, a0
@@ -142,11 +142,24 @@ demo_psg_init:
 ;   demo_fm_init
 ;============================================================================
 demo_fm_init:
-    lea Inst_test_organ_0, A1
-    move.b  #0, d2              ;channel 0
-    jsr load_FM_instrument    
-    jsr set_FM_frequency
-    jsr keyon_FM_channel
+    lea agr_14_ch0, a0
+    lea ch_fm_1, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #0, fm_ch_channel(a5)
+    move.l  a0, fm_ch_stream_ptr(a5)
+
+    lea agr_14_ch1, a0
+    lea ch_fm_2, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #1, fm_ch_channel(a5)
+    move.l  a0, fm_ch_stream_ptr(a5)
+
+    
+    ; lea Inst_test_organ_0, A1
+    ; move.b  #0, d2              ;channel 0
+    ; jsr load_FM_instrument    
+    ; jsr set_FM_frequency
+    ; jsr keyon_FM_channel
     rts    
     
 ;==============================================================

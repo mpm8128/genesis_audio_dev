@@ -44,17 +44,192 @@ M_return_Z80_bus: macro
 audio_driver:
     ;jsr top_level_stuff
     jsr handle_all_psg_channels ;all psg channels
-    ;jsr handle_fm_channels
+    jsr handle_all_fm_channels      ;all fm channels    
     ;jsr handle_dac             ;or maybe make the z80 do this one
     rts
     
+;============================================================================
+;   handle_all_fm_channels
+;============================================================================
+handle_all_fm_channels:
+    lea ch_fm_1, a5     ;a5 = pointer to first fm channel struct
+    moveq   #5, d7      ;d7 = number of FM channels -1 (loop counter)
+    
+    ;for each channel
+@loop_fm_ch:
+    tst.b   fm_ch_is_enabled(a5)    ;if channel is disabled
+    beq     @next_channel           ;   skip it
+                                    ;else
+    jsr handle_fm_channel           ;   handle it
+@next_channel:
+    adda.w  #fm_ch_size, a5         ;next channel
+    dbf d7, @loop_fm_ch             ;loop end
+
+    rts
+    
+;============================================================================
+;   handle_fm_channel
+;parameter: pointer to psg channel struct in a5
+;unusable: d7   
+;============================================================================
+handle_fm_channel:
+    move.b  fm_ch_note_time(a5), d6     ;check note duration
+    beq     @done_waiting               ;if duration == 0, read new code from stream
+                                        ;else
+    subi.b  #1, fm_ch_note_time(a5)    ;decrement note duration counter
+    rts                                 ;and return
+    
+@done_waiting:
+    move.l  fm_ch_stream_ptr(a5), a4    ;a4 = stream pointer for the channel
+    cmp.l   #0, a4                      ;null check
+    beq     exit_stream              ;if stream ptr == null, cleanup and return
+    
+read_fm_stream:
+    clr.w   d6                          ;needs to be a clean slate for the cmp ahead
+    lea     fm_stream_jumptable, a3     ;a3 = jumptable pointer
+    move.b  (a4)+, d6       ;read code from stream
+    cmp     #num_sc, d6      ;if code# > number of codes
+    bgt     bad_stream_code ;   handle stream error
+                            ;else
+    lsl.w   #2, d6          ;   longword-align
+    movea.l (a3, d6.w), a3  ;   a3 = indexed function
+    jmp     (a3)            ;   call the indexed function
+
+    ;table of functions indexed by stream codes
+fm_stream_jumptable:
+    dc.l    stream_fm_stop    
+    dc.l    stream_fm_loop
+    dc.l    stream_fm_keyon
+    dc.l    stream_fm_keyoff    
+    dc.l    stream_fm_load_instrument
+    dc.l    stream_fm_reg_write
+
+    ;TODO
+stream_fm_reg_write
+    bra read_fm_stream  ;read more from stream
+
+;==============================================================
+;   stream_fm_load_instrument
+;   code: sc_load_inst
+;
+;   loads an FM instrument from the specified address
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       l   pointer to instrument data
+;==============================================================
+stream_fm_load_instrument:
+    move.w  a4, d6          ;copy address to d6 to compare
+    btst    #0, d6          ;check if stream ptr is odd or even
+    beq     @word_aligned   ;
+    tst.b   (a4)+           ;align that bad boy
+@word_aligned:
+    movea.l (a4)+, a1               ;a1 = instrument pointer
+    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    jsr     load_FM_instrument
+    bra read_fm_stream              ;read more from stream
+
+
+;==============================================================
+;   stream_fm_stop
+;   code: sc_stop
+;
+;   mutes the channel and marks it as disabled, wipes stream ptr
+;
+;parameters:
+;   a5 - channel struct pointer
+;==============================================================
+stream_fm_stop:
+    clr.b   fm_ch_is_enabled(a5)   ;mark channel as "disabled"
+    clr.l   fm_ch_stream_ptr(a5)   ;wipe stream pointer
+    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    jsr     quick_mute_FM_channel   ;disable both stereo channels
+    jsr     keyoff_FM_channel       ;write keyoff
+    rts
+    
+;==============================================================
+;   stream_fm_loop
+;   code: sc_loop
+;
+;   moves the stream pointer to location specified in [addr]
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       l   pointer to looping point
+;==============================================================
+stream_fm_loop:
+    move.w  a4, d6          ;copy address to d6 to compare
+    btst    #0, d6          ;check if stream ptr is odd or even
+    beq     @word_aligned   ;
+    tst.b   (a4)+           ;align that bad boy
+@word_aligned:
+    ;move new stream location to channel struct
+    move.l  (a4), fm_ch_stream_ptr(a5)
+    move.l  fm_ch_stream_ptr(a5), a4
+
+    bra read_fm_stream     ;read more from stream
+
+;==============================================================
+;   stream_fm_keyon
+;   code: sc_keyon
+;
+;   writes pitch information ([note], [octave]) from stream
+;       and holds that note for [duration]
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b   note_name
+;       b   note_octave
+;       b   note_duration
+;==============================================================
+stream_fm_keyon:
+    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
+    jsr keyoff_FM_channel
+    
+    move.b  (a4)+,  d6                      ;d6 = note name
+    move.b  d6, fm_ch_note_name(a5)         ;write to struct also
+    ext.w   d6                              ;sign-extend to word-length
+    move.b  (a4)+,  d0                      ;d5 = note octave
+    move.b  d0, fm_ch_note_octave(a5)       ;write to struct also
+    lea     fm_frequency_table, a0
+    lsl.w   #1, d6                          ;word-align
+    move.w  (a0, d6.w), d1                  ;d1.w = frequency number
+    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
+    
+    jsr     set_FM_frequency                ;write frequency to 2612
+    
+    jsr     keyon_FM_channel                ;write keyon for fm channel
+
+    move.b  (a4)+, fm_ch_note_time(a5)      ;set note duration
+    bra exit_stream                         ;cleanup and return
+    
+;==============================================================
+;   stream_fm_keyoff
+;   code: sc_keyoff
+;
+;   writes keyoff and waits for [duration]
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b   note_duration
+;==============================================================
+stream_fm_keyoff:
+    move.b  fm_ch_channel(a5), d2       ;d2 = channel number
+    jsr     keyoff_FM_channel           ;write keyoff to 2612
+    move.b  (a4)+, fm_ch_note_time(a5)  ;set silence duration
+
+    bra exit_stream                     ;cleanup and return
     
 ;============================================================================
 ;   handle_all_psg_channels
 ;============================================================================
 handle_all_psg_channels:
     lea ch_psg_0, a5        ;a5 = pointer to first psg channel struct
-    moveq   #3, d7          ;number of PSG channels (loop counter)
+    moveq   #3, d7          ;number of PSG channels -1 (loop counter)
     
     ;for each channel
 @loop_psg_ch:
@@ -83,14 +258,14 @@ handle_psg_channel:
 @done_waiting:
     move.l  psg_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
-    beq     exit_psg_stream             ;if stream ptr == null, cleanup and return
+    beq     exit_stream             ;if stream ptr == null, cleanup and return
     
 read_psg_stream:
     clr.w   d6                          ;needs to be a clean slate for the cmp ahead
     lea     psg_stream_jumptable, a3    ;a3 = jumptable pointer
     move.b  (a4)+, d6       ;read code from stream
-    cmp     num_sc, d6      ;if code# > number of codes
-    blt    bad_stream_code  ;   handle stream error
+    cmp     #num_sc, d6      ;if code# > number of codes
+    bgt     bad_stream_code ;   handle stream error
                             ;else
     lsl.w   #2, d6          ;   longword-align
     movea.l (a3, d6.w), a3  ;   a3 = indexed function
@@ -102,6 +277,16 @@ psg_stream_jumptable:
     dc.l    stream_psg_loop
     dc.l    stream_psg_keyon
     dc.l    stream_psg_keyoff
+    dc.l    stream_psg_load_instrument
+    dc.l    stream_psg_reg_write
+    
+    ;TODO
+stream_psg_reg_write:
+    bra read_psg_stream     ;read more from stream
+
+    ;TODO
+stream_psg_load_instrument:
+    bra read_psg_stream     ;read more from stream
     
 ;============================================================================
 ;   bad_stream_code
@@ -117,13 +302,13 @@ bad_stream_code:
     bra     bad_stream_code
     
 ;============================================================================
-;   exit_psg_stream
+;   exit_stream
 ;       writes stream pointer back to channel struct and returns
 ;============================================================================
-exit_psg_stream:
+exit_stream:
     move.l   a4, psg_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
-        
+    
 ;==============================================================
 ;   stream_psg_stop
 ;   code: sc_stop
@@ -196,7 +381,7 @@ stream_psg_keyon:
 
     move.b  (a4)+, psg_ch_note_time(a5)  ;set note duration
 
-    bra exit_psg_stream                 ;cleanup and return
+    bra exit_stream                 ;cleanup and return
 
 ;==============================================================
 ;   stream_psg_keyoff
@@ -216,7 +401,7 @@ stream_psg_keyoff:
     
     move.b  (a4)+, psg_ch_note_time(a5)     ;set silence duration
 
-    bra exit_psg_stream             ;cleanup and return
+    bra exit_stream             ;cleanup and return
     
 ;==============================================================
 ;   stream codes
@@ -226,7 +411,8 @@ sc_stop         rs.b        1
 sc_loop         rs.b        1
 sc_keyon        rs.b        1
 sc_keyoff       rs.b        1
-;sc_reg_write    rs.b        1
+sc_load_inst    rs.b        1
+sc_reg_write    rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
@@ -294,8 +480,8 @@ psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
                                     ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
                                     ;bit 7 - unused
 
-;psg_ch_size             rs.b    0   ;size of the struct
-psg_ch_size     equ     0x20
+psg_ch_size             rs.w    0   ;size of the struct
+;psg_ch_size     equ     0x20
 
 ;==============================================================
 ;   FM Channel Structure
@@ -311,7 +497,8 @@ fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
 fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
 fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)
 fm_ch_note_octave       rs.b    1   ;current octave (pre-vibr/envelope)
-fm_ch_algorithm         rs.b    1   ;algorithm (0-8)
+fm_ch_algorithm         rs.b    1   ;algorithm (0-7)
+fm_ch_lr_amfm           rs.b    1   ;LRAA xFFF
 
 fm_ch_inst_ptr          rs.l    1   ;pointer to "base" instrument data
 
@@ -345,7 +532,7 @@ fm_ch_auto_flags        rs.b    1   ;XYZS LPTV
                                     ;bit 7 - "X" - stereo envelope mode (0 - one-shot, 1 - loop)
 
 
-fm_ch_size              rs.b    0   ;size of the struct
+fm_ch_size              rs.w    0   ;size of the struct
 
 
 ;==============================================================
@@ -358,6 +545,14 @@ ch_psg_1                    rs.b    psg_ch_size
 ch_psg_2                    rs.b    psg_ch_size
 ch_psg_noise                rs.b    psg_ch_size
 
+ch_fm_1                     rs.b    fm_ch_size
+ch_fm_2                     rs.b    fm_ch_size
+ch_fm_3                     rs.b    fm_ch_size
+ch_fm_4                     rs.b    fm_ch_size
+ch_fm_5                     rs.b    fm_ch_size
+ch_fm_6                     rs.b    fm_ch_size
+
+;ch_dac                      rs.b    fm_ch_size    
 ;============================================================================
 ;   PSG Functions
 ;============================================================================

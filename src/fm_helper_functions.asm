@@ -22,27 +22,49 @@ FM_init:
     jsr keyoff_FM_channel
     move.b  #6, d2
     jsr keyoff_FM_channel
-
     rts
   
 ;============================================================================
+;   quick_mute_FM_channel
+;       disables both stereo outputs
+;parameters:
+;   a5 - pointer to struct (optional)
+;   d2.b - channel (0-2, 4-6)
+;============================================================================
+quick_mute_FM_channel:
+    move.l  a5, d6                  ;copy a5 to d6
+    tst.l   d6                      ;null check
+    beq     @skip_mod_data          ;if null, don't do this
+    move.b  fm_ch_lr_amfm(a5), d1   ;load mod data from struct
+    
+@skip_mod_data:
+    move.b  #0xB4, d0               ;stereo/am/fm mod register
+    andi.b  #0x3F, d1               ;mask off stereo bits
+    jsr write_register_opn2
+    rts
+    
+;============================================================================
 ;   set_FM_frequency
 ;
-;   d1.b = frequency msb
-;   d2.b = channel
-;   d3.b = frequency lsb    
+;   d0.b = octave/block (0-7)
+;   d1.w = frequency (split up in function) 
+;   d2.b = channel  (0-2, 4-6)
 ;============================================================================
 set_FM_frequency:
-    move.b  d2, d0          ;copy channel to d0
-    bclr    #2, d0          ;clear opn2 "side" bit
-    addi.b  #$A4, d0        ;d0 = freq_msb reg + channel
+    move.b  d1, d3          ;save lsb in d3
+    lsr.w   #8, d1          ;shift msb down
+    lsl.b   #3, d0          ;shift octave/block into place
+    or.b    d0, d1          ;OR in octave/block
+
+    ;move.b  d2, d0          ;copy channel to d0
+    ;bclr    #2, d0          ;clear opn2 "side" bit
+    move.b  #0xA4, d0        ;d0 = freq_msb reg + channel
     jsr write_register_opn2
     
     move.b  d3, d1          ;d1 = freq_lsb
-    subi.b  #4, d0          ;d0 = (A4 - 4) + channel
+    move.b  #0xA0, d0          ;d0 = (A4 - 4) + channel
                             ;d0 = freq_lsb reg + channel
     jsr write_register_opn2
-
     rts
     
 ;============================================================================
@@ -54,7 +76,7 @@ keyon_FM_channel:
     move.b  #$28, d0            ;d0 = keyon/off register
     move.b  d2, d1              ;d1 = channel
     ori.b   #$F0, d1            ;mask in keyon for all operators
-    jsr write_register_opn2_side1   ;write_register_opn2(d0, d1, d2) (register, data, channel)
+    jsr write_register_opn2_ctrl   ;write_register_opn2(d0, d1, d2) (register, data, channel)
     rts
     
 ;============================================================================
@@ -66,7 +88,7 @@ keyoff_FM_channel:
     moveq   #$28, d0            ;d0 = keyon/off register
     move.b  d2, d1              ;d1 = channel
     andi.b  #$0F, d1            ;mask in keyoff for all operators
-    jsr write_register_opn2_side1   ;write_register_opn2(d0, d1, d2) (register, data, channel)
+    jsr write_register_opn2_ctrl   ;write_register_opn2(d0, d1, d2) (register, data, channel)
     rts
     
 ;============================================================================
@@ -76,15 +98,17 @@ keyoff_FM_channel:
 ;   d2 = channel (0-2, 4-6)
 ;============================================================================
 load_FM_instrument:
-    move.b  #$30, d0            ;d0 = start register for instrument parameters
-    moveq   #5, d3                  ;d3 = number of parameters - 1    
+    move.w  #0x30, d0            ;d0 = start register for instrument parameters
+;    moveq   #5, d3                  ;d3 = number of parameters - 1    
+    move.w  #23, d3
 @loop_each_parameter:               ;for each parameter (det_mul, tl, rs_ar, am_d1r, d2r, sl_rr)
-    moveq   #3, d4              ;d4 = number of operators - 1
-@loop_each_operator:            ;for each operator (0xY0, 0xY4, 0xY8, 0xYC)
+;    moveq   #3, d4              ;d4 = number of operators - 1
+;@loop_each_operator:            ;for each operator (0xY0, 0xY4, 0xY8, 0xYC)
     move.b  (a1)+, d1           ;d1 = data
     jsr write_register_opn2     ;write_register_opn2(d0, d1, d2) (register, data, channel)
     addi.b  #4, d0              ;next operator
-    dbf d4, @loop_each_operator ;end loop
+    andi.b  #0xFC, d0
+;    dbf d4, @loop_each_operator ;end loop
     dbf d3, @loop_each_parameter    ;end loop
     move.b #$B0, d0             ;d0 = register for feedback/algorithm
     move.b (a1)+, d1
