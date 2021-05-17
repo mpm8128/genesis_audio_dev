@@ -131,4 +131,21 @@ Inst_horn_2:
             0x3E, &                     ;fb_alg
             0xC0                        ;lr_amfm
     
+Inst_noise_waves:
+            ;A     ML    D    S     R
+    dc.b    0x01, 0x0F, 0x01, 0x00, 0x00
+            ;noise mode
+    dc.b    0x00
+    
+Inst_psg_bass:
+        ;   A      ML    D      S     R    NM
+    dc.b    0x0F, 0x0F, 0x02, 0x05, 0x00, 0x00 
+
+Inst_psg_organ:
+        ;   A      ML    D      S     R    NM
+    dc.b    0x03, 0x0F, 0x0F, 0x0A, 0x05, 0x00 
+
     even
+    
+    
+    include 'automation_envelopes.asm'

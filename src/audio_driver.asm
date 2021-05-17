@@ -82,7 +82,7 @@ handle_fm_channel:
 @done_waiting:
     move.l  fm_ch_stream_ptr(a5), a4    ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
-    beq     exit_stream              ;if stream ptr == null, cleanup and return
+    beq     exit_fm_stream              ;if stream ptr == null, cleanup and return
     
 read_fm_stream:
     clr.w   d6                          ;needs to be a clean slate for the cmp ahead
@@ -103,9 +103,29 @@ fm_stream_jumptable:
     dc.l    stream_fm_keyoff    
     dc.l    stream_fm_load_instrument
     dc.l    stream_fm_reg_write
+    dc.l    stream_hold
+
+;==============================================================
+;   stream_hold
+;   code: sc_hold
+;
+;   waits for [duration]
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b   time to wait
+;==============================================================
+stream_hold:
+    move.b  (a4)+, fm_ch_note_time(a5)      ;set note duration
+    bra exit_fm_stream                     ;cleanup and return
+
+exit_fm_stream:
+    move.l   a4, psg_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
+    rts
 
     ;TODO
-stream_fm_reg_write
+stream_fm_reg_write:
     bra read_fm_stream  ;read more from stream
 
 ;==============================================================
@@ -126,10 +146,8 @@ stream_fm_load_instrument:
     tst.b   (a4)+           ;align that bad boy
 @word_aligned:
     movea.l (a4)+, a1               ;a1 = instrument pointer
-    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
     jsr     load_FM_instrument
     bra read_fm_stream              ;read more from stream
-
 
 ;==============================================================
 ;   stream_fm_stop
@@ -200,11 +218,11 @@ stream_fm_keyon:
     move.b  fm_ch_channel(a5), d2           ;d2 = channel number
     
     jsr     set_FM_frequency                ;write frequency to 2612
-    
+    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
     jsr     keyon_FM_channel                ;write keyon for fm channel
 
     move.b  (a4)+, fm_ch_note_time(a5)      ;set note duration
-    bra exit_stream                         ;cleanup and return
+    bra exit_fm_stream                         ;cleanup and return
     
 ;==============================================================
 ;   stream_fm_keyoff
@@ -222,7 +240,7 @@ stream_fm_keyoff:
     jsr     keyoff_FM_channel           ;write keyoff to 2612
     move.b  (a4)+, fm_ch_note_time(a5)  ;set silence duration
 
-    bra exit_stream                     ;cleanup and return
+    bra exit_fm_stream                     ;cleanup and return
     
 ;============================================================================
 ;   handle_all_psg_channels
@@ -233,10 +251,12 @@ handle_all_psg_channels:
     
     ;for each channel
 @loop_psg_ch:
-    tst.b   psg_ch_is_enabled(a5)   ;if channel is disabled
+    tst.b   psg_ch_inst_flags(a5)   ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
-    jsr handle_psg_channel          ;   handle it
+    jsr handle_psg_stream           ;   read stream events
+    jsr handle_psg_adsr             ;   adjust with envelope
+    jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
     adda.w  #psg_ch_size, a5         ;next channel
     dbf d7, @loop_psg_ch            ;loop end
@@ -244,21 +264,22 @@ handle_all_psg_channels:
     rts
     
 ;============================================================================
-;   handle_psg_channels
+;   handle_psg_stream
 ;parameter: pointer to psg channel struct in a5
 ;unusable: d7   
 ;============================================================================
-handle_psg_channel:
-    move.b  psg_ch_note_time(a5), d6    ;check note duration
+handle_psg_stream:
+    move.b  psg_ch_wait_time(a5), d6    ;check note duration
     beq     @done_waiting               ;if duration == 0, read new code from stream
                                         ;else
-    subi.b  #1, psg_ch_note_time(a5)    ;decrement note duration counter
-    rts                                 ;and return
+    subi.b  #1, psg_ch_wait_time(a5)    ;decrement note duration counter
+    beq     @done_waiting               ;   and check again so we don't wait too long
+    rts                                 ;else return
     
 @done_waiting:
     move.l  psg_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
-    beq     exit_stream             ;if stream ptr == null, cleanup and return
+    beq     exit_psg_stream             ;if stream ptr == null, cleanup and return
     
 read_psg_stream:
     clr.w   d6                          ;needs to be a clean slate for the cmp ahead
@@ -279,14 +300,24 @@ psg_stream_jumptable:
     dc.l    stream_psg_keyoff
     dc.l    stream_psg_load_instrument
     dc.l    stream_psg_reg_write
-    
+    dc.l    stream_hold
     ;TODO
 stream_psg_reg_write:
     bra read_psg_stream     ;read more from stream
 
-    ;TODO
+;============================================================================
+;   load psg instrument from stream
+;============================================================================
 stream_psg_load_instrument:
-    bra read_psg_stream     ;read more from stream
+    move.w  a4, d6          ;copy address to d6 to compare
+    btst    #0, d6          ;check if stream ptr is odd or even
+    beq     @word_aligned   ;
+    tst.b   (a4)+           ;align that bad boy
+@word_aligned:
+    movea.l (a4)+, a1               ;a1 = instrument pointer
+    move.b  psg_ch_channel(a5), d2
+    jsr     load_PSG_instrument
+    bra read_psg_stream
     
 ;============================================================================
 ;   bad_stream_code
@@ -302,10 +333,10 @@ bad_stream_code:
     bra     bad_stream_code
     
 ;============================================================================
-;   exit_stream
+;   exit_psg_stream
 ;       writes stream pointer back to channel struct and returns
 ;============================================================================
-exit_stream:
+exit_psg_stream:
     move.l   a4, psg_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
     
@@ -319,7 +350,7 @@ exit_stream:
 ;   a5 - channel struct pointer
 ;==============================================================
 stream_psg_stop:
-    clr.b   psg_ch_is_enabled(a5)   ;mark channel as "disabled"
+    clr.b   psg_ch_inst_flags(a5)   ;mark channel as "disabled"
     clr.l   psg_ch_stream_ptr(a5)   ;wipe stream pointer
     move.b  psg_ch_channel(a5), d0  ;d0 = channel number
     move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
@@ -365,23 +396,29 @@ stream_psg_loop:
 ;==============================================================
 stream_psg_keyon:
     move.b  (a4)+,  d6                  ;d6 = note name
-    move.b  d6, psg_ch_note_name(a5)    ;write to struct also
+    ;move.b  d6, psg_ch_note_name(a5)    ;write to struct also
     ext.w   d6                          ;sign-extend to word-length
     move.b  (a4)+,  d5                  ;d5 = note octave
-    move.b  d5, psg_ch_note_octave(a5)  ;write to struct also
+    ;move.b  d5, psg_ch_note_octave(a5)  ;write to struct also
     ext.w   d5                          ;sign-extend to word-length
     jsr get_psg_freq_from_note_name_and_octave  ;d1 = timer_value
+    ;save to struct
+    move.w  d1, psg_ch_base_freq(a5)
+    move.w  d1, psg_ch_adj_freq(a5)
     
-    move.b  psg_ch_channel(a5), d0      ;d0 = channel number
-    jsr     PSG_SetFrequency    ;set_frequency(channel, timer_value)
+    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
+    bset    #6, d0  ;set "keyon" flag
+    move.b  d0, psg_ch_inst_flags(a5) ;write back to struct
+    
+    ;move.b  psg_ch_channel(a5), d0      ;d0 = channel number
+    ;jsr     PSG_SetFrequency    ;set_frequency(channel, timer_value)
+    ;move.b  psg_ch_channel(a5), d0      ;d0 = channel number
+    ;move.b  psg_ch_base_vol(a5), d1     ;d1 = base volume
+    ;jsr     PSG_SetVolume               ;PSG_SetVolume(channel, 0)
 
-    move.b  psg_ch_channel(a5), d0      ;d0 = channel number
-    move.b  psg_ch_base_vol(a5), d1     ;d1 = base volume
-    jsr     PSG_SetVolume               ;PSG_SetVolume(channel, 0)
+    move.b  (a4)+, psg_ch_wait_time(a5)  ;set note duration
 
-    move.b  (a4)+, psg_ch_note_time(a5)  ;set note duration
-
-    bra exit_stream                 ;cleanup and return
+    bra exit_psg_stream                 ;cleanup and return
 
 ;==============================================================
 ;   stream_psg_keyoff
@@ -395,14 +432,165 @@ stream_psg_keyon:
 ;       b   note_duration
 ;==============================================================
 stream_psg_keyoff:
-    move.b  psg_ch_channel(a5), d0  ;d0 = channel number
-    move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
-    jsr     PSG_SetVolume           ;PSG_SetVolume(channel, 0)
+    ;move.b  psg_ch_channel(a5), d0  ;d0 = channel number
+    ;move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
+    ;jsr     PSG_SetVolume           ;PSG_SetVolume(channel, 0)
     
-    move.b  (a4)+, psg_ch_note_time(a5)     ;set silence duration
+    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
+    bset    #5, d0
+    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
 
-    bra exit_stream             ;cleanup and return
     
+    move.b  (a4)+, psg_ch_wait_time(a5)     ;set silence duration
+
+    bra exit_psg_stream             ;cleanup and return
+    
+    
+    
+    
+;==============================================================
+;   handle_psg_automation
+;       gets called after stream handling, per channel
+;   xYZx LPTV
+;   bit 0 - "V" - vibrato enable
+;   bit 1 - "T" - tremelo enable
+;   bit 2 - "P" - pitch envelope enable
+;   bit 3 - "L" - volume envelope enable
+;   bit 4 - unused
+;   bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
+;   bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
+;   bit 7 - unused
+;==============================================================
+; handle_psg_automation:
+    ; move.b  psg_ch_auto_flags(a5), d6   ;d6 = auto flags
+    ; btst    #0, d6              ;check if vibrato is enabled
+    ; beq     @skip_vibrato       ;if not, skip it
+    ; ;jsr     handle_vibrato
+; @skip_vibrato:
+
+    ; btst    #1, d6
+    ; beq     @skip_tremelo
+    ; ;jsr    handle_tremelo
+; @skip_tremelo:
+
+    ; btst    #2, d6
+    ; beq     @skip_pitch_envelope
+    ; ;jsr    handle_pitch_envelope
+; @skip_pitch_envelope
+
+    ; btst    #3, d6
+    ; beq     @skip_vol_envelope
+    ; jsr     handle_vol_envelope
+; @skip_vol_envelope:
+    ; rts
+    
+    ; ;;
+; handle_vol_envelope:
+    ; move.w  psg_ch_vol_auto_idx(a5), d5     ;d5 = idx
+    ; move.l  psg_ch_vol_auto_ptr(a5), a4     ;a4 = envelope
+    ; move.b  (a4, d5.w), d1                  ;d1 = envelope[idx]
+    ; move.b  psg_ch_channel(a5), d0
+    ; jsr     PSG_SetVolume
+    
+    ; addi.w  #1, d5                          ;increment idx
+    ; move.w  psg_ch_vol_auto_len(a5), d4
+    ; cmp.w   d4, d5     
+    ; blt     @cleanup
+    
+    ; btst    #6, d6
+    ; bne     @loop_envelope
+    ; ;else
+    ; subi.w  #1, d5
+    ; bra     @cleanup
+; @loop_envelope
+    ; ;move.w  psg_ch_vol_auto_len(a5), d6
+    ; moveq   #0, d5
+    
+; @cleanup:
+    ; move.w  d5, psg_ch_vol_auto_idx(a5)
+    ; rts
+    
+;==============================================================
+;   handle psg adsr
+;==============================================================
+handle_psg_adsr:
+    move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
+    btst    #2, d0  ;check status bit
+    bne     @cleanup_and_return ;if nothing is playing, bail
+    ;else
+    btst    #6, d0  ;check for keyon event
+    beq     @no_keyon
+    ;else handle keyon
+    andi.b  #0x98, d0   ;clear bits 0-2 and bit 5-6
+        ;envelope counter, status bit, and keyon/keyoff
+    bra     @no_keyoff
+@no_keyon:
+    btst    #5, d0  ;check for keyoff event
+    beq @no_keyoff
+    ;else handle keyoff
+    bclr    #5, d0      ;clear keyoff bit
+    ori.b   #0x03, d0       ;set bits 0-1 for release
+@no_keyoff:
+    move.b  d0, d1      ;d1 = copy of d0
+    andi.b  #0x03, d1   ;adsr bits only
+    move.b  psg_ch_current_vol(a5), d2  ;d2 = cur_vol
+
+;@check_attack
+    cmp.b   #0x0, d1    ;check if attack
+    bne     @check_decay
+                        ;else handle attack
+    add.b   psg_ch_attack_rate(a5), d2  ;d2 + ar
+    cmp.b   psg_ch_max_level(a5), d2    ;if max_vol > d2
+    blt     @writeback_cur_vol           ;write to struct and return
+                                        ;else (max_vol <= d2)
+    move.b  psg_ch_max_level(a5), d2    ;d2 = max_vol
+    bra     @next_state
+    
+@check_decay:
+    cmp.b   #0x01, d1   ;check decay
+    bne     @check_sustain
+                        ;else handle decay
+    sub.b   psg_ch_decay_rate(a5), d2   ;d2 - dr
+    cmp.b   psg_ch_sus_level(a5), d2    ;if sus_vol < d2
+    bgt     @writeback_cur_vol    ;write to struct
+                                    ;else (sus_vol >= d2)
+    move.b  psg_ch_sus_level(a5), d2    ;d2 = sus_vol
+    bra     @next_state
+    
+@check_sustain:
+    cmp.b   #0x02, d1   ;check sustain
+    beq     @cleanup_and_return ;don't do anything for sustain
+;@check_release:
+    sub.b   psg_ch_release_rate(a5), d2 ;d2 - rr
+    tst.b   d2                          ;if d2 > 0
+    bgt     @writeback_cur_vol          ;write to struct   
+                                        ;else (d2 < 0)
+    clr.b   d2  ;d2 = 0
+@next_state:
+    addi.b  #1, d1
+    
+@writeback_cur_vol:
+    move.b  d2, psg_ch_current_vol(a5)
+    bra @cleanup_and_return
+
+@cleanup_and_return:
+    andi.b  #0xF0, d0   ;mask off low bits
+    or.b    d1, d0      ;d0 |= d1
+    move.b  d0, psg_ch_inst_flags(a5) ;write to struct
+    rts
+    
+;==============================================================
+;   psg write to chip
+;==============================================================
+psg_driver_write_to_chip:
+    move.b  psg_ch_channel(a5), d0      ;d0 = channel
+    move.b  psg_ch_current_vol(a5), d1  ;d1 = vol
+    jsr PSG_SetVolume   ;(channel (d0.b), vol (d1.b))
+    
+    move.b  psg_ch_channel(a5), d0      ;d0 = channel
+    move.w  psg_ch_adj_freq(a5), d1      ;d0 = channel
+    jsr PSG_SetFrequency    ;(channel (d0.b), counter (d1.w))
+    rts
 ;==============================================================
 ;   stream codes
 ;==============================================================
@@ -413,6 +601,7 @@ sc_keyon        rs.b        1
 sc_keyoff       rs.b        1
 sc_load_inst    rs.b        1
 sc_reg_write    rs.b        1
+sc_hold         rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
@@ -437,122 +626,9 @@ note_As     rs.b    0
 note_Bb     rs.b    1
 note_B      rs.b    1    
     
-;==============================================================
-;   PSG Channel Structure
-;==============================================================
-    RSRESET
-;PSG channel instrument information
-psg_ch_is_enabled       rs.b    1   ;0 (disabled) or !0 (enabled)
-psg_ch_channel          rs.b    1   ;channel id (0-3)
-psg_ch_note_time        rs.w    1   ;number of frames to hold the note for
 
-psg_ch_stream_ptr       rs.l    1   ;pointer to stream of audio data
-
-psg_ch_base_vol         rs.b    1   ;"base" volume (pre-trem/envelope)
-psg_ch_note_name        rs.b    1   ;current note (pre-vibr/envelope)
-psg_ch_note_octave      rs.b    1   ;current octave (pre-vibr/envelope)
-psg_ch_noise_mode       rs.b    1   ;0-3
-
-;psg_ch_inst_ptr         rs.l    1 ;unused
-
-;PSG channel automation information
-psg_ch_freq_auto_idx    rs.b    1   ;index into pitchbend envelope
-psg_ch_freq_auto_time   rs.b    1   ;number of frames on each index
-psg_ch_freq_auto_ptr    rs.l    1   ;pointer to the envelope
-
-psg_ch_vol_auto_idx     rs.b    1   ;index into volume envelope
-psg_ch_vol_auto_time    rs.b    1   ;number of frames on each index
-psg_ch_vol_auto_ptr     rs.l    1   ;pointer to the envelope
-
-psg_ch_vibrato_time     rs.b    1   ;number of frames before increment/decrement
-psg_ch_vibrato_size     rs.b    1   ;max deviation from base frequency
-
-psg_ch_tremelo_time     rs.b    1   ;number of frames before increment/decrement
-psg_ch_tremelo_size     rs.b    1   ;max deviation from base volume
-
-psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
-                                    ;bit 0 - "V" - vibrato enable
-                                    ;bit 1 - "T" - tremelo enable
-                                    ;bit 2 - "P" - pitch envelope enable
-                                    ;bit 3 - "L" - volume envelope enable
-                                    ;bit 4 - unused
-                                    ;bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 7 - unused
-
-psg_ch_size             rs.w    0   ;size of the struct
-;psg_ch_size     equ     0x20
-
-;==============================================================
-;   FM Channel Structure
-;==============================================================
-    RSRESET
-;fm channel instrument information
-fm_ch_is_enabled        rs.b    1   ;0 (disabled) or !0 (enabled)
-fm_ch_channel           rs.b    1   ;channel id (0-3)
-fm_ch_note_time         rs.w    1   ;number of frames to hold the note for
-
-fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
-
-fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
-fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)
-fm_ch_note_octave       rs.b    1   ;current octave (pre-vibr/envelope)
-fm_ch_algorithm         rs.b    1   ;algorithm (0-7)
-fm_ch_lr_amfm           rs.b    1   ;LRAA xFFF
-
-fm_ch_inst_ptr          rs.l    1   ;pointer to "base" instrument data
-
-;fm channel automation information
-fm_ch_freq_auto_idx     rs.b    1   ;index into pitchbend envelope
-fm_ch_freq_auto_time    rs.b    1   ;number of frames on each index
-fm_ch_freq_auto_ptr     rs.l    1   ;pointer to the envelope
-
-fm_ch_vol_auto_idx      rs.b    1   ;index into volume envelope
-fm_ch_vol_auto_time     rs.b    1   ;number of frames on each index
-fm_ch_vol_auto_ptr      rs.l    1   ;pointer to the envelope
-
-fm_ch_st_auto_idx       rs.b    1   ;index into stereo envelope
-fm_ch_st_auto_time      rs.b    1   ;number of frames on each index
-fm_ch_st_auto_ptr       rs.l    1   ;pointer to the envelope
-
-fm_ch_vibrato_time      rs.b    1   ;number of frames before increment/decrement
-fm_ch_vibrato_size      rs.b    1   ;max deviation from base frequency
-
-fm_ch_tremelo_time      rs.b    1   ;number of frames before increment/decrement
-fm_ch_tremelo_size      rs.b    1   ;max deviation from base volume
-
-fm_ch_auto_flags        rs.b    1   ;XYZS LPTV
-                                    ;bit 0 - "V" - vibrato enable
-                                    ;bit 1 - "T" - tremelo enable
-                                    ;bit 2 - "P" - pitch envelope enable
-                                    ;bit 3 - "L" - volume envelope enable
-                                    ;bit 4 - "S" - stereo envelope enable
-                                    ;bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 7 - "X" - stereo envelope mode (0 - one-shot, 1 - loop)
-
-
-fm_ch_size              rs.w    0   ;size of the struct
-
-
-;==============================================================
-; MEMORY MAP
-;==============================================================
-	RSSET 0x00FF1000    
-; PSG Channel Headers:
-ch_psg_0                    rs.b    psg_ch_size
-ch_psg_1                    rs.b    psg_ch_size
-ch_psg_2                    rs.b    psg_ch_size
-ch_psg_noise                rs.b    psg_ch_size
-
-ch_fm_1                     rs.b    fm_ch_size
-ch_fm_2                     rs.b    fm_ch_size
-ch_fm_3                     rs.b    fm_ch_size
-ch_fm_4                     rs.b    fm_ch_size
-ch_fm_5                     rs.b    fm_ch_size
-ch_fm_6                     rs.b    fm_ch_size
-
-;ch_dac                      rs.b    fm_ch_size    
+    include 'channel_structs.asm'
+  
 ;============================================================================
 ;   PSG Functions
 ;============================================================================
@@ -565,6 +641,30 @@ ch_fm_6                     rs.b    fm_ch_size
   
     include 'fm_helper_functions.asm'
     
+;============================================================================
+;   Song macros and includes
+;============================================================================
+M_play_note: macro note, octave, duration
+    dc.b    sc_keyon, \note, \octave, \duration   ;-1 because of quirks
+    endm
+
+M_play_longnote: macro note, octave, duration
+longtime = \duration
+    dc.b    sc_keyon, \note, \octave, 0
+    
+    do
+    dc.b    sc_hold, 255
+longtime = (longtime-255)
+    until   longtime <= 256
+    
+    dc.b    sc_hold, longtime                     ;-3 because of quirks I really need to fix
+    endm
+
+M_play_rest: macro duration
+    dc.b    sc_keyoff, duration                   ;-1 because of quirks
+    endm
+
     
     include 'demo_song.asm'
     include 'demo_agr_14.asm'
+    include 'demo_cza_3.asm'

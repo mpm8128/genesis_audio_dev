@@ -75,8 +75,8 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    ;jsr demo_psg_init
-    jsr demo_fm_init
+    jsr demo_psg_init
+    ;jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -85,76 +85,63 @@ demo_init:
 ;   demonstrates basic PSG by playing a note
 ;==============================================================
 demo_psg_init:
-    lea agr_14_ch0, a0  ;stream data
-    lea ch_psg_0, a5    ;channel struct
+
+    lea agr_14_ch1, a0
+    lea ch_psg_0, a5
     
-    move.b  #1, psg_ch_is_enabled(a5)
+    move.b  #0x80, psg_ch_inst_flags(a5)
     move.b  #0, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
     
-    move.b  #0x0A, psg_ch_base_vol(a5)
-    move.b  #0, psg_ch_note_time(a5)
+    lea agr_14_ch0, a0
+    lea ch_psg_2, a5
     
-    lea agr_14_ch1, a0
-    lea ch_psg_1, a5
-    
-    move.b  #1, psg_ch_is_enabled(a5)
-    move.b  #1, psg_ch_channel(a5)
+    move.b  #0x80, psg_ch_inst_flags(a5)
+    move.b  #2, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
     
-    move.b  #0x08, psg_ch_base_vol(a5)
-    move.b  #0, psg_ch_note_time(a5)
-
-    ; lea demo_psg_2, a0
-    ; lea ch_psg_2, a5
+    ; move.b  #0x08, psg_ch_auto_flags(a5)
+    ; move.b  #0, psg_ch_vol_auto_idx(a5)
+    ; move.b  #1, psg_ch_vol_auto_time(a5)
+    ; lea     E_noise_wave+2, a0
+    ; move.l  a0, psg_ch_vol_auto_ptr(a5)
+    ; move.w  (E_noise_wave), psg_ch_vol_auto_len(a5)
     
-    ; move.b  #1, psg_ch_is_enabled(a5)
-    ; move.b  #2, psg_ch_channel(a5)
-    ; move.l  a0, psg_ch_stream_ptr(a5)
-    
-    ; move.b  #0x08, psg_ch_base_vol(a5)
+    ; move.b  #0xA, psg_ch_base_vol(a5)
     ; move.b  #0, psg_ch_note_time(a5)
 
     rts
 
-	; ; Initialise PSG values in RAM
-	; ;move.b #initial_psg_vol, ram_psg0_volume
-	; ;move.w #initial_psg_freq, ram_psg1_frequency
-
-	; ; Set PSG channel 0 frequency
-    ; move.w  #10, d1  ;d1 = "A#"
-    ; move.w  #3, d2  ;d2 = octave 3
-    ; ;move.w  #33, d1
-    ; jsr get_psg_freq_from_note_name_and_octave
-    ; move.w d0, d1   ;d1 = calculated_frequency
-	
-    ; move.b #0x0, d0                 ;channel
-	; ;move.b #initial_psg_freq, d1    
-	; jsr    PSG_SetFrequency
-
-	; ; Set PSG channel 0 volume
-	; move.b #0x0, d0
-	; move.b #initial_psg_vol, d1
-	; jsr    PSG_SetVolume
-    ; rts
 
 ;============================================================================
 ;   demo_fm_init
 ;============================================================================
 demo_fm_init:
-    lea agr_14_ch0, a0
+    lea cza_3_bass, a0
     lea ch_fm_1, a5     ;channel 
     move.b #1, fm_ch_is_enabled(a5)
     move.b #0, fm_ch_channel(a5)
     move.l  a0, fm_ch_stream_ptr(a5)
 
-    lea agr_14_ch1, a0
+    lea cza_3_harmony_1, a0
     lea ch_fm_2, a5     ;channel 
     move.b #1, fm_ch_is_enabled(a5)
     move.b #1, fm_ch_channel(a5)
     move.l  a0, fm_ch_stream_ptr(a5)
 
-    
+    lea cza_3_harmony_2, a0
+    lea ch_fm_3, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #2, fm_ch_channel(a5)
+    move.l  a0, fm_ch_stream_ptr(a5)
+
+    lea cza_3_lead_horn, a0
+    lea ch_fm_4, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #4, fm_ch_channel(a5)
+    move.l  a0, fm_ch_stream_ptr(a5)
+
+
     ; lea Inst_test_organ_0, A1
     ; move.b  #0, d2              ;channel 0
     ; jsr load_FM_instrument    
@@ -177,21 +164,10 @@ demo_tiles_init:
     ; Write tile positions to plane A VRAM
 	SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
 	move.w #tile_id_blank, vdp_data		; 
-	move.w #tile_id_a, vdp_data		; 
-    move.w #tile_id_b, vdp_data		; 
-    move.w #tile_id_c, vdp_data		; 
-    move.w #tile_id_d, vdp_data		; 
-    move.w #tile_id_e, vdp_data		; 
-    move.w #tile_id_f, vdp_data		
-    move.w #tile_id_g, vdp_data		
-    move.w #tile_id_h, vdp_data		
-    move.w #tile_id_i, vdp_data		
-    move.w #tile_id_j, vdp_data		
-    move.w #tile_id_k, vdp_data		
-    move.w #tile_id_l, vdp_data		
-    move.w #tile_id_m, vdp_data		
-    move.w #tile_id_n, vdp_data		
-    move.w #tile_id_o, vdp_data		
+    move.w #tile_id_c, vdp_data		
+    move.w #tile_id_z, vdp_data		
+    move.w #tile_id_a, vdp_data		
+    move.w #tile_id_3, vdp_data
     ; move.w #tile_id_p, vdp_data		
     ; move.w #tile_id_q, vdp_data		
     ; move.w #tile_id_r, vdp_data		

@@ -10,6 +10,8 @@ fm_frequency_table:
 ;============================================================================
 
 FM_init:
+    rts
+    ;;
     move.b  #0, d2
     jsr keyoff_FM_channel
     move.b  #1, d2
@@ -91,6 +93,7 @@ keyoff_FM_channel:
 ;   load_FM_instrument
 ;
 ;   a1 = pointer to instrument data
+;   a5 - pointer to channel struct
 ;   d2 = channel (0-2, 4-6)
 ;============================================================================
 load_FM_instrument:
@@ -115,9 +118,12 @@ load_FM_instrument:
 ;
 ;   d0 = register
 ;   d1 = data
-;   d2 = channel (0-2 = side 1, 4-6 = side 2. CTRL uses channel 0)
+;   A5 = pointer to channel struct
+;   ;;;;d2 = channel (0-2 = side 1, 4-6 = side 2. CTRL uses channel 0)
 ;============================================================================
 write_register_opn2:
+    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+
     btst	#2, d2          ;check bit to see which side of the 2612 to write to
     bne.b	setup_write_register_opn2_side2
     ;else fallthrough to side 1/ctrl

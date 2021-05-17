@@ -10,7 +10,24 @@ psg_frequency_table:
                 107, 101,  95,  90,  85,  80,  76,  71,  67,  64,  60,  57, &   ;C6 -> B6
                  53,  50,  48,  45,  42,  40,  38,  36,  34,  32,  30,  28, &   ;C7 -> B7
                  27,  25,  24,  22,  21,  20,  19,  18,  17,  16,  15,  14      ;C8 -> B8
-                  
+      
+;============================================================================
+;   load_PSG_instrument
+;
+;   a1 = pointer to instrument data
+;   a5 - pointer to channel struct
+;   d2 = channel (0-3)
+;============================================================================
+load_PSG_instrument:
+    move.l  a1, psg_ch_inst_ptr(a5)
+    move.b  (a1)+, psg_ch_attack_rate(a5)
+    move.b  (a1)+, psg_ch_max_level(a5)
+    move.b  (a1)+, psg_ch_decay_rate(a5)
+    move.b  (a1)+, psg_ch_sus_level(a5)
+    move.b  (a1)+, psg_ch_release_rate(a5)
+    move.b  (a1)+, psg_ch_noise_mode(a5)
+    rts
+      
 ;==============================================================
 ;   get_psg_freq_from_note_name_and_octave
 ;parameters:
@@ -64,7 +81,7 @@ PSG_Init:
     lea ch_psg_0, a5
     moveq   #3, d7
 @loop_disable_psg_ch:
-    clr.b   psg_ch_is_enabled(a5)
+    clr.b   psg_ch_inst_flags(a5)
     adda.w  #psg_ch_size, a5
     dbf d7, @loop_disable_psg_ch
 	rts
