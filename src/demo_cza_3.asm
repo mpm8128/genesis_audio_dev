@@ -135,7 +135,39 @@ cza_3_bass:
     dc.b sc_loop
     even
     dc.l cza_3_bass
+    
+;====================================
+M_psg_a_section: macro
+    M_play_note note_C, 3, et
+    M_play_note note_Eb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Eb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_C, 4, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Eb, 3, et
+    endm
 
+cza_3_psg0:
+    M_play_rest 6
+cza_3_psg1:
+    M_play_rest 6
+cza_3_psg2:
+    dc.b    sc_load_inst
+    even
+    dc.l    Inst_psg_pluck
+
+    M_psg_a_section
+    
+    dc.b    sc_loop
+    even
+    dc.l    cza_3_psg2
+
+;====================================
 M_noise_a_section: macro
     M_play_note 6, 2, wn
     M_play_rest wn

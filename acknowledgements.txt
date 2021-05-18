@@ -1,0 +1,10 @@
+;Acknowledgements
+
+;For chip documentation and translating Sega's documentation into English
+https://www.aidanlawrence.com/                      
+https://www.smspower.org/maxim/Documents/YM2612
+https://www.chibiakumas.com/68000/genesis.php
+
+;For help getting this project off the ground
+BIGEVILCORPORATION  (early demo code, VDP handling code/macros)
+Treasure            (high-level ideas of how to process audio from ROM)

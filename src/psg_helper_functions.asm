@@ -139,11 +139,11 @@ PSG_SetVolume:
 	; B = Frequency bits 4-9
 ;==============================================================
 PSG_SetFrequency:
-    moveq   #0, d3          ;clear noise flag
-    cmp.b   #3, d0          ;if noise channel
-    bne     @skip_noise_flag
-    moveq   #1, d3          ;set noise flag
-@skip_noise_flag
+    ;moveq   #0, d3          ;clear noise flag
+    ;cmp.b   #3, d0          ;if noise channel
+    ;bne     @skip_noise_flag
+    ;moveq   #1, d3          ;set noise flag
+;@skip_noise_flag
 	move.w d1, d2	        ; Split the frequency into two bytes
 	andi.b #0x0F, d1        ; Mask low byte to 4 bits (and sets type bit for 1st byte to 0=frequency)
 	lsr.w  #0x4, d2 	    ; Shift upper 6 bits down, mask unused bytes (and sets latch bit for 2nd byte to 0)
@@ -153,8 +153,14 @@ PSG_SetFrequency:
 	ori.b  #0x80, d0        ; Set latch bit on 1st byte
 	move.b d0, psg_control  ; Write byte 1 to PSG (channel ID and lower 4 bits of frequency)
     
-    tst.b   d3
-    bne @return
+    ;tst.b   d3
+    ;bne @return
 	move.b d2, psg_control  ; Write byte 2 to PSG (upper 6 bits of frequency)
-@return:
+;@return:
+    rts
+    
+;==============================================================
+;   PSG_set_noise_mode
+;==============================================================
+PSG_set_noise_mode:
     rts

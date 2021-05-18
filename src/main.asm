@@ -85,30 +85,36 @@ demo_init:
 ;   demonstrates basic PSG by playing a note
 ;==============================================================
 demo_psg_init:
-
-    lea demo_noise, a0
-    lea ch_psg_noise, a5
+    
+    ;psg channels
+    lea cza_3_psg0, a0
+    lea ch_psg_0, a5
     
     move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  #3, psg_ch_channel(a5)
+    move.b  #0, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
     
-    ; lea agr_14_ch0, a0
-    ; lea ch_psg_2, a5
+    lea cza_3_psg1, a0
+    lea ch_psg_1, a5
+    
+    move.b  #0x80, psg_ch_inst_flags(a5)
+    move.b  #1, psg_ch_channel(a5)
+    move.l  a0, psg_ch_stream_ptr(a5)
+
+    lea cza_3_psg2, a0
+    lea ch_psg_2, a5
+    
+    move.b  #0x80, psg_ch_inst_flags(a5)
+    move.b  #2, psg_ch_channel(a5)
+    move.l  a0, psg_ch_stream_ptr(a5)
+
+    ;noise channel
+    ; lea demo_noise, a0
+    ; lea ch_psg_noise, a5
     
     ; move.b  #0x80, psg_ch_inst_flags(a5)
-    ; move.b  #2, psg_ch_channel(a5)
+    ; move.b  #3, psg_ch_channel(a5)
     ; move.l  a0, psg_ch_stream_ptr(a5)
-    
-    ; move.b  #0x08, psg_ch_auto_flags(a5)
-    ; move.b  #0, psg_ch_vol_auto_idx(a5)
-    ; move.b  #1, psg_ch_vol_auto_time(a5)
-    ; lea     E_noise_wave+2, a0
-    ; move.l  a0, psg_ch_vol_auto_ptr(a5)
-    ; move.w  (E_noise_wave), psg_ch_vol_auto_len(a5)
-    
-    ; move.b  #0xA, psg_ch_base_vol(a5)
-    ; move.b  #0, psg_ch_note_time(a5)
 
     rts
 
