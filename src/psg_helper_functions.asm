@@ -3,7 +3,7 @@
 psg_frequency_table:
 ;                0    1    2    3    4    5    6    7    8    9    10   11    
 ;                C    C#   D    D#   E    F    F#   G    G#   A    A#   B    
-    dc.w          0,   0,   0,   0,   0,   0,   0,   0,  0, 1017, 960, 906, &   ;A2 -> B2
+    dc.w          0,   1,   2,   3,   4,   5,   6,   7,  0, 1017, 960, 906, &   ;A2 -> B2
                 855, 807, 762, 719, 679, 641, 605, 571, 539, 508, 480, 453, &   ;C3 -> B3
                 428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226, &   ;C4 -> B4
                 214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113, &   ;C5 -> B5
@@ -26,6 +26,11 @@ load_PSG_instrument:
     move.b  (a1)+, psg_ch_sus_level(a5)
     move.b  (a1)+, psg_ch_release_rate(a5)
     move.b  (a1)+, psg_ch_noise_mode(a5)
+    move.b  (a1)+, psg_ch_attack_scaling(a5)
+    move.b  (a1)+, psg_ch_decay_scaling(a5)
+    move.b  (a1)+, psg_ch_release_scaling(a5)
+    
+    move.b  #0, psg_ch_adsr_counter(a5) ;reset this when we reload the instrument
     rts
       
 ;==============================================================
@@ -134,6 +139,11 @@ PSG_SetVolume:
 	; B = Frequency bits 4-9
 ;==============================================================
 PSG_SetFrequency:
+    moveq   #0, d3          ;clear noise flag
+    cmp.b   #3, d0          ;if noise channel
+    bne     @skip_noise_flag
+    moveq   #1, d3          ;set noise flag
+@skip_noise_flag
 	move.w d1, d2	        ; Split the frequency into two bytes
 	andi.b #0x0F, d1        ; Mask low byte to 4 bits (and sets type bit for 1st byte to 0=frequency)
 	lsr.w  #0x4, d2 	    ; Shift upper 6 bits down, mask unused bytes (and sets latch bit for 2nd byte to 0)
@@ -142,5 +152,9 @@ PSG_SetFrequency:
 	or.b   d1, d0           ; OR in the low bits
 	ori.b  #0x80, d0        ; Set latch bit on 1st byte
 	move.b d0, psg_control  ; Write byte 1 to PSG (channel ID and lower 4 bits of frequency)
+    
+    tst.b   d3
+    bne @return
 	move.b d2, psg_control  ; Write byte 2 to PSG (upper 6 bits of frequency)
-	rts
+@return:
+    rts

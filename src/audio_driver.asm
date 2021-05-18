@@ -73,17 +73,18 @@ handle_all_fm_channels:
 ;unusable: d7   
 ;============================================================================
 handle_fm_channel:
-    move.b  fm_ch_note_time(a5), d6     ;check note duration
+    move.b  fm_ch_wait_time(a5), d6    ;check note duration
     beq     @done_waiting               ;if duration == 0, read new code from stream
                                         ;else
-    subi.b  #1, fm_ch_note_time(a5)    ;decrement note duration counter
-    rts                                 ;and return
+    subi.b  #1, fm_ch_wait_time(a5)    ;decrement note duration counter
+    beq     @done_waiting               ;   and check again so we don't wait too long
+    rts                                 ;else return
     
 @done_waiting:
-    move.l  fm_ch_stream_ptr(a5), a4    ;a4 = stream pointer for the channel
+    move.l  fm_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
-    beq     exit_fm_stream              ;if stream ptr == null, cleanup and return
-    
+    beq     exit_fm_stream             ;if stream ptr == null, cleanup and return
+
 read_fm_stream:
     clr.w   d6                          ;needs to be a clean slate for the cmp ahead
     lea     fm_stream_jumptable, a3     ;a3 = jumptable pointer
@@ -117,11 +118,11 @@ fm_stream_jumptable:
 ;       b   time to wait
 ;==============================================================
 stream_hold:
-    move.b  (a4)+, fm_ch_note_time(a5)      ;set note duration
-    bra exit_fm_stream                     ;cleanup and return
+    move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
+    jmp exit_fm_stream                     ;cleanup and return
 
 exit_fm_stream:
-    move.l   a4, psg_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
+    move.l   a4, fm_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
 
     ;TODO
@@ -221,8 +222,8 @@ stream_fm_keyon:
     move.b  fm_ch_channel(a5), d2           ;d2 = channel number
     jsr     keyon_FM_channel                ;write keyon for fm channel
 
-    move.b  (a4)+, fm_ch_note_time(a5)      ;set note duration
-    bra exit_fm_stream                         ;cleanup and return
+    move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
+    jmp exit_fm_stream                         ;cleanup and return
     
 ;==============================================================
 ;   stream_fm_keyoff
@@ -238,9 +239,9 @@ stream_fm_keyon:
 stream_fm_keyoff:
     move.b  fm_ch_channel(a5), d2       ;d2 = channel number
     jsr     keyoff_FM_channel           ;write keyoff to 2612
-    move.b  (a4)+, fm_ch_note_time(a5)  ;set silence duration
+    move.b  (a4)+, fm_ch_wait_time(a5)  ;set silence duration
 
-    bra exit_fm_stream                     ;cleanup and return
+    jmp exit_fm_stream                     ;cleanup and return
     
 ;============================================================================
 ;   handle_all_psg_channels
@@ -301,6 +302,7 @@ psg_stream_jumptable:
     dc.l    stream_psg_load_instrument
     dc.l    stream_psg_reg_write
     dc.l    stream_hold
+    
     ;TODO
 stream_psg_reg_write:
     bra read_psg_stream     ;read more from stream
@@ -396,28 +398,18 @@ stream_psg_loop:
 ;==============================================================
 stream_psg_keyon:
     move.b  (a4)+,  d6                  ;d6 = note name
-    ;move.b  d6, psg_ch_note_name(a5)    ;write to struct also
     ext.w   d6                          ;sign-extend to word-length
     move.b  (a4)+,  d5                  ;d5 = note octave
-    ;move.b  d5, psg_ch_note_octave(a5)  ;write to struct also
     ext.w   d5                          ;sign-extend to word-length
     jsr get_psg_freq_from_note_name_and_octave  ;d1 = timer_value
+    
     ;save to struct
     move.w  d1, psg_ch_base_freq(a5)
     move.w  d1, psg_ch_adj_freq(a5)
-    
-    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
-    bset    #6, d0  ;set "keyon" flag
-    move.b  d0, psg_ch_inst_flags(a5) ;write back to struct
-    
-    ;move.b  psg_ch_channel(a5), d0      ;d0 = channel number
-    ;jsr     PSG_SetFrequency    ;set_frequency(channel, timer_value)
-    ;move.b  psg_ch_channel(a5), d0      ;d0 = channel number
-    ;move.b  psg_ch_base_vol(a5), d1     ;d1 = base volume
-    ;jsr     PSG_SetVolume               ;PSG_SetVolume(channel, 0)
-
-    move.b  (a4)+, psg_ch_wait_time(a5)  ;set note duration
-
+    move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
+    bset    #6, d0                      ;set "keyon" flag
+    move.b  d0, psg_ch_inst_flags(a5)   ;write back to struct
+    move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
     bra exit_psg_stream                 ;cleanup and return
 
 ;==============================================================
@@ -431,22 +423,12 @@ stream_psg_keyon:
 ;   a4 - stream pointer
 ;       b   note_duration
 ;==============================================================
-stream_psg_keyoff:
-    ;move.b  psg_ch_channel(a5), d0  ;d0 = channel number
-    ;move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
-    ;jsr     PSG_SetVolume           ;PSG_SetVolume(channel, 0)
-    
-    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
+stream_psg_keyoff:    
+    move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
     bset    #5, d0
-    move.b  psg_ch_inst_flags(a5), d0 ;d0 = instrument flags
-
-    
-    move.b  (a4)+, psg_ch_wait_time(a5)     ;set silence duration
-
+    move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
+    move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
     bra exit_psg_stream             ;cleanup and return
-    
-    
-    
     
 ;==============================================================
 ;   handle_psg_automation
@@ -515,68 +497,96 @@ stream_psg_keyoff:
 ;==============================================================
 handle_psg_adsr:
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
-    btst    #2, d0  ;check status bit
-    bne     @cleanup_and_return ;if nothing is playing, bail
-    ;else
-    btst    #6, d0  ;check for keyon event
-    beq     @no_keyon
-    ;else handle keyon
-    andi.b  #0x98, d0   ;clear bits 0-2 and bit 5-6
-        ;envelope counter, status bit, and keyon/keyoff
+    btst    #2, d0                      ;check status bit
+    bne     @cleanup_and_return         ;if nothing is playing, bail
+;@check_keyon:
+    btst    #6, d0          ;check for keyon event
+    beq     @no_keyon           
+                            ;else handle keyon
+    andi.b  #0x98, d0       ;clear bits 0-2 and bit 5-6
+                            ;envelope counter, status bit, and keyon/keyoff
     bra     @no_keyoff
 @no_keyon:
-    btst    #5, d0  ;check for keyoff event
+;@check_keyoff:
+    btst    #5, d0          ;check for keyoff event
     beq @no_keyoff
-    ;else handle keyoff
-    bclr    #5, d0      ;clear keyoff bit
+                            ;else handle keyoff
+    bclr    #5, d0          ;clear keyoff bit
     ori.b   #0x03, d0       ;set bits 0-1 for release
 @no_keyoff:
-    move.b  d0, d1      ;d1 = copy of d0
-    andi.b  #0x03, d1   ;adsr bits only
+    
+    ;handle envelope
+    move.b  d0, d1                      ;d1 = copy of d0
+    andi.b  #0x03, d1                   ;adsr bits only
     move.b  psg_ch_current_vol(a5), d2  ;d2 = cur_vol
+    move.b  psg_ch_adsr_counter(a5), d3 ;d3 = adsr counter
 
-;@check_attack
-    cmp.b   #0x0, d1    ;check if attack
+;@check_attack:
+    cmp.b   #0x0, d1        ;check if attack
     bne     @check_decay
-                        ;else handle attack
+                            ;else handle attack
+;@check attack scaling
+    tst.b   d3                      ;if d3 < 0
+    ble     @apply_attack           ;   apply attack
+                                    ;else 
+    subq    #1, d3                  ;   d3--
+    bra     @writeback_to_struct    ;   writeback
+@apply_attack:
+    move.b  psg_ch_attack_scaling(a5), d3   ;reload adsr counter
     add.b   psg_ch_attack_rate(a5), d2  ;d2 + ar
     cmp.b   psg_ch_max_level(a5), d2    ;if max_vol > d2
-    blt     @writeback_cur_vol           ;write to struct and return
+    blt     @writeback_to_struct           ;write to struct and return
                                         ;else (max_vol <= d2)
     move.b  psg_ch_max_level(a5), d2    ;d2 = max_vol
     bra     @next_state
     
 @check_decay:
-    cmp.b   #0x01, d1   ;check decay
+    cmp.b   #0x01, d1               ;check decay
     bne     @check_sustain
-                        ;else handle decay
-    sub.b   psg_ch_decay_rate(a5), d2   ;d2 - dr
-    cmp.b   psg_ch_sus_level(a5), d2    ;if sus_vol < d2
-    bgt     @writeback_cur_vol    ;write to struct
-                                    ;else (sus_vol >= d2)
-    move.b  psg_ch_sus_level(a5), d2    ;d2 = sus_vol
+;@check decay scaling
+    tst.b   d3                      ;if d3 < 0
+    ble     @apply_decay            ;   apply decay
+                                    ;else 
+    subq    #1, d3                  ;   d3--
+    bra     @writeback_to_struct    ;   writeback
+@apply_decay:
+    move.b  psg_ch_decay_scaling(a5), d3    ;reload adsr counter
+    sub.b   psg_ch_decay_rate(a5), d2       ;d2 - dr
+    cmp.b   psg_ch_sus_level(a5), d2        ;if sus_vol < d2
+    bgt     @writeback_to_struct            ;write to struct
+                                            ;else (sus_vol >= d2)
+    move.b  psg_ch_sus_level(a5), d2        ;d2 = sus_vol
     bra     @next_state
     
 @check_sustain:
-    cmp.b   #0x02, d1   ;check sustain
+    cmp.b   #0x02, d1           ;check sustain
     beq     @cleanup_and_return ;don't do anything for sustain
 ;@check_release:
+;@check release scaling
+    tst.b   d3                      ;if d3 < 0
+    ble     @apply_release          ;   apply release
+                                    ;else 
+    subq    #1, d3                  ;   d3--
+    bra     @writeback_to_struct    ;   writeback
+@apply_release:
+    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
+
     sub.b   psg_ch_release_rate(a5), d2 ;d2 - rr
     tst.b   d2                          ;if d2 > 0
-    bgt     @writeback_cur_vol          ;write to struct   
+    bgt     @writeback_to_struct        ;   write to struct   
                                         ;else (d2 < 0)
-    clr.b   d2  ;d2 = 0
+    clr.b   d2                          ;   d2 = 0
 @next_state:
-    addi.b  #1, d1
-    
-@writeback_cur_vol:
-    move.b  d2, psg_ch_current_vol(a5)
-    bra @cleanup_and_return
+    addi.b  #1, d1                      ;state++
+@writeback_to_struct:
+    move.b  d2, psg_ch_current_vol(a5)  ;writeback vol
+    move.b  d3, psg_ch_adsr_counter(a5) ;writeback adsr counter
+    ;bra @cleanup_and_return
 
 @cleanup_and_return:
-    andi.b  #0xF0, d0   ;mask off low bits
-    or.b    d1, d0      ;d0 |= d1
-    move.b  d0, psg_ch_inst_flags(a5) ;write to struct
+    andi.b  #0xF0, d0                   ;mask off low bits
+    or.b    d1, d0                      ;d0 |= d1
+    move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
     rts
     
 ;==============================================================
@@ -585,7 +595,7 @@ handle_psg_adsr:
 psg_driver_write_to_chip:
     move.b  psg_ch_channel(a5), d0      ;d0 = channel
     move.b  psg_ch_current_vol(a5), d1  ;d1 = vol
-    jsr PSG_SetVolume   ;(channel (d0.b), vol (d1.b))
+    jsr PSG_SetVolume       ;(channel (d0.b), vol (d1.b))
     
     move.b  psg_ch_channel(a5), d0      ;d0 = channel
     move.w  psg_ch_adj_freq(a5), d1      ;d0 = channel
@@ -626,7 +636,6 @@ note_As     rs.b    0
 note_Bb     rs.b    1
 note_B      rs.b    1    
     
-
     include 'channel_structs.asm'
   
 ;============================================================================
@@ -661,7 +670,7 @@ longtime = (longtime-255)
     endm
 
 M_play_rest: macro duration
-    dc.b    sc_keyoff, duration                   ;-1 because of quirks
+    dc.b    sc_keyoff, \duration                   ;-1 because of quirks
     endm
 
     

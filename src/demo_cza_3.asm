@@ -11,7 +11,6 @@ tm  set     2*wn
 
 ;==========================
 
-
 M_lead_a_section:   macro
     M_play_note note_C, 2, wn
     M_play_note note_C, 3, hn
@@ -130,17 +129,22 @@ cza_3_bass:
     dc.b    sc_load_inst
     even
     dc.l    Inst_bass_2
+    
     M_bass_a_section
+    
     dc.b sc_loop
     even
     dc.l cza_3_bass
 
 M_noise_a_section: macro
-    M_play_note note_C, 4, wn
+    M_play_note 6, 2, wn
     M_play_rest wn
     endm
 
 demo_noise:
+    dc.b    sc_load_inst
+    even
+    dc.l    Inst_noise_waves
     rept 8
     M_noise_a_section
     endr

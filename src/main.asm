@@ -76,7 +76,7 @@ init_z80:
 ;==============================================================
 demo_init:
     jsr demo_psg_init
-    ;jsr demo_fm_init
+    jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -86,19 +86,19 @@ demo_init:
 ;==============================================================
 demo_psg_init:
 
-    lea agr_14_ch1, a0
-    lea ch_psg_0, a5
+    lea demo_noise, a0
+    lea ch_psg_noise, a5
     
     move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  #0, psg_ch_channel(a5)
+    move.b  #3, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
     
-    lea agr_14_ch0, a0
-    lea ch_psg_2, a5
+    ; lea agr_14_ch0, a0
+    ; lea ch_psg_2, a5
     
-    move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  #2, psg_ch_channel(a5)
-    move.l  a0, psg_ch_stream_ptr(a5)
+    ; move.b  #0x80, psg_ch_inst_flags(a5)
+    ; move.b  #2, psg_ch_channel(a5)
+    ; move.l  a0, psg_ch_stream_ptr(a5)
     
     ; move.b  #0x08, psg_ch_auto_flags(a5)
     ; move.b  #0, psg_ch_vol_auto_idx(a5)
@@ -141,12 +141,6 @@ demo_fm_init:
     move.b #4, fm_ch_channel(a5)
     move.l  a0, fm_ch_stream_ptr(a5)
 
-
-    ; lea Inst_test_organ_0, A1
-    ; move.b  #0, d2              ;channel 0
-    ; jsr load_FM_instrument    
-    ; jsr set_FM_frequency
-    ; jsr keyon_FM_channel
     rts    
     
 ;==============================================================
@@ -164,21 +158,18 @@ demo_tiles_init:
     ; Write tile positions to plane A VRAM
 	SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
 	move.w #tile_id_blank, vdp_data		; 
-    move.w #tile_id_c, vdp_data		
-    move.w #tile_id_z, vdp_data		
-    move.w #tile_id_a, vdp_data		
-    move.w #tile_id_3, vdp_data
-    ; move.w #tile_id_p, vdp_data		
-    ; move.w #tile_id_q, vdp_data		
+    ; move.w #tile_id_a, vdp_data		
+    ; move.w #tile_id_g, vdp_data		
     ; move.w #tile_id_r, vdp_data		
-    ; move.w #tile_id_s, vdp_data		
-    ; move.w #tile_id_t, vdp_data		
-    ; move.w #tile_id_u, vdp_data		
-    ; move.w #tile_id_v, vdp_data		
-    ; move.w #tile_id_w, vdp_data		
-    ; move.w #tile_id_x, vdp_data		
-    ; move.w #tile_id_y, vdp_data		
-    ; move.w #tile_id_z, vdp_data		
+    ; move.w #tile_id_blank, vdp_data		
+    ; move.w #tile_id_1, vdp_data
+    ; move.w #tile_id_4, vdp_data
+    move.w #tile_id_c, vdp_data		; 
+    move.w #tile_id_z, vdp_data		; 
+    move.w #tile_id_a, vdp_data		; 
+    move.w #tile_id_3, vdp_data		; 
+
+   
     rts
     
 

@@ -27,7 +27,7 @@ psg_ch_inst_flags       rs.b    1
     ;   stream events while set to zero
     
 psg_ch_channel          rs.b    1   ;channel id (0-3)
-psg_ch_attack_rate      rs.b    1   ;attack rate(0-15)
+psg_ch_attack_rate      rs.b    1   ;attack rate(1-15)
                                     ;    rise in volume per-frame during the
                                     ;    "attack" phase of the ADSR envelope
 psg_ch_max_level        rs.b    1   ;max_level (0-15)
@@ -44,6 +44,13 @@ psg_ch_sus_level        rs.b    1   ;sustain level (0-15)
 psg_ch_release_rate     rs.b    1   ;release rate (0-15)
                                     ;   fall in volume per-frame during the
                                     ;   "release" phase of the ADSR envelope
+psg_ch_attack_scaling   rs.b    1   ;attack scaling (1-255)
+                                    ;   number of frames to wait before adding the
+                                    ;   attack rate in the "attack" phase
+                                    ;   of the ADSR envelope
+psg_ch_decay_scaling    rs.b    1   ;decay scaling (1-255)
+psg_ch_release_scaling  rs.b    1   ;release scaling (1-255)
+psg_ch_adsr_counter     rs.b    1   ;counter for scaling > 1
 
 psg_ch_noise_mode       rs.b    1   ;0-3 (0 for square-wave channels)
 psg_ch_current_vol      rs.b    1   ;0-15
@@ -98,7 +105,7 @@ psg_ch_size             rs.w    0   ;size of the struct
 ;fm channel instrument information
 fm_ch_is_enabled        rs.b    1   ;0 (disabled) or !0 (enabled)
 fm_ch_channel           rs.b    1   ;channel id (0-3)
-fm_ch_note_time         rs.w    1   ;number of frames to hold the note for
+fm_ch_wait_time         rs.w    1   ;number of frames to hold the note for
 
 fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
 
