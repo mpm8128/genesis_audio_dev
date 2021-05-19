@@ -76,7 +76,7 @@ init_z80:
 ;==============================================================
 demo_init:
     jsr demo_psg_init
-    jsr demo_fm_init
+    ;jsr demo_fm_init
     jsr demo_tiles_init
     rts
 
@@ -87,26 +87,34 @@ demo_init:
 demo_psg_init:
     
     ;psg channels
-    lea cza_3_psg0, a0
+    lea agr_14_ch0, a0
     lea ch_psg_0, a5
     
     move.b  #0x80, psg_ch_inst_flags(a5)
     move.b  #0, psg_ch_channel(a5)
     move.l  a0, psg_ch_stream_ptr(a5)
-    
-    lea cza_3_psg1, a0
-    lea ch_psg_1, a5
-    
-    move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  #1, psg_ch_channel(a5)
-    move.l  a0, psg_ch_stream_ptr(a5)
 
-    lea cza_3_psg2, a0
-    lea ch_psg_2, a5
     
-    move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  #2, psg_ch_channel(a5)
-    move.l  a0, psg_ch_stream_ptr(a5)
+    ; lea cza_3_psg0, a0
+    ; lea ch_psg_0, a5
+    
+    ; move.b  #0x80, psg_ch_inst_flags(a5)
+    ; move.b  #0, psg_ch_channel(a5)
+    ; move.l  a0, psg_ch_stream_ptr(a5)
+    
+    ; lea cza_3_psg1, a0
+    ; lea ch_psg_1, a5
+    
+    ; move.b  #0x80, psg_ch_inst_flags(a5)
+    ; move.b  #1, psg_ch_channel(a5)
+    ; move.l  a0, psg_ch_stream_ptr(a5)
+
+    ; lea cza_3_psg2, a0
+    ; lea ch_psg_2, a5
+    
+    ; move.b  #0x80, psg_ch_inst_flags(a5)
+    ; move.b  #2, psg_ch_channel(a5)
+    ; move.l  a0, psg_ch_stream_ptr(a5)
 
     ;noise channel
     ; lea demo_noise, a0

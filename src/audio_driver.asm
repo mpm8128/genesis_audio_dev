@@ -407,6 +407,7 @@ stream_psg_keyon:
     move.w  d1, psg_ch_base_freq(a5)
     move.w  d1, psg_ch_adj_freq(a5)
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
+    andi.b  #0x80, d0       ;clear everything but the "enable" bit
     bset    #6, d0                      ;set "keyon" flag
     move.b  d0, psg_ch_inst_flags(a5)   ;write back to struct
     move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
@@ -425,7 +426,9 @@ stream_psg_keyon:
 ;==============================================================
 stream_psg_keyoff:    
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
-    bset    #5, d0
+    andi.b  #0x80, d0       ;clear everything but the "enable" bit
+    ;bset    #5, d0
+    ori.b   #0x23, d0       ;set keyoff flag and release state
     move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
     move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
     bra exit_psg_stream             ;cleanup and return
@@ -498,13 +501,13 @@ stream_psg_keyoff:
 handle_psg_adsr:
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
     btst    #2, d0                      ;check status bit
-    bne     @cleanup_and_return         ;if nothing is playing, bail
+    bne     @just_return         ;if nothing is playing, bail
 ;@check_keyon:
     btst    #6, d0          ;check for keyon event
     beq     @no_keyon           
                             ;else handle keyon
-    andi.b  #0x98, d0       ;clear bits 0-2 and bit 5-6
-                            ;envelope counter, status bit, and keyon/keyoff
+    ;andi.b  #0x98, d0       ;clear bits 0-2 and bit 5-6
+    ;                        ;envelope counter, status bit, and keyon/keyoff
     bra     @no_keyoff
 @no_keyon:
 ;@check_keyoff:
@@ -512,7 +515,9 @@ handle_psg_adsr:
     beq @no_keyoff
                             ;else handle keyoff
     bclr    #5, d0          ;clear keyoff bit
-    ori.b   #0x03, d0       ;set bits 0-1 for release
+    ;ori.b   #0x03, d0       ;set bits 0-1 for release
+    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
+    bra @check_release
 @no_keyoff:
     
     ;handle envelope
@@ -561,9 +566,9 @@ handle_psg_adsr:
 @check_sustain:
     cmp.b   #0x02, d1           ;check sustain
     beq     @cleanup_and_return ;don't do anything for sustain
-;@check_release:
+@check_release:
 ;@check release scaling
-    tst.b   d3                      ;if d3 < 0
+    tst.b   d3                      ;if d3 <= 0
     ble     @apply_release          ;   apply release
                                     ;else 
     subq    #1, d3                  ;   d3--
@@ -583,10 +588,12 @@ handle_psg_adsr:
     move.b  d3, psg_ch_adsr_counter(a5) ;writeback adsr counter
     ;bra @cleanup_and_return
 
+
 @cleanup_and_return:
     andi.b  #0xF0, d0                   ;mask off low bits
     or.b    d1, d0                      ;d0 |= d1
     move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
+@just_return:
     rts
     
 ;==============================================================
@@ -658,19 +665,31 @@ M_play_note: macro note, octave, duration
     endm
 
 M_play_longnote: macro note, octave, duration
-longtime = \duration
+longtime = (\duration-1)
     dc.b    sc_keyon, \note, \octave, 0
     
     do
     dc.b    sc_hold, 255
 longtime = (longtime-255)
-    until   longtime <= 256
+    until   (longtime<256)
     
     dc.b    sc_hold, longtime                     ;-3 because of quirks I really need to fix
     endm
 
 M_play_rest: macro duration
     dc.b    sc_keyoff, \duration                   ;-1 because of quirks
+    endm
+
+M_play_longrest: macro duration
+longtime = (\duration-1)
+    dc.b    sc_keyoff, 0
+    
+    do
+    dc.b    sc_hold, 255
+longtime = (longtime-255)
+    until   (longtime<256)
+    
+    dc.b    sc_hold, longtime                     ;-3 because of quirks I really need to fix
     endm
 
     

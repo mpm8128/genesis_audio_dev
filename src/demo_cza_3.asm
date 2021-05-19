@@ -137,7 +137,7 @@ cza_3_bass:
     dc.l cza_3_bass
     
 ;====================================
-M_psg_a_section: macro
+M_psg_a_01: macro
     M_play_note note_C, 3, et
     M_play_note note_Eb, 3, et
     M_play_note note_G, 3, et
@@ -149,7 +149,116 @@ M_psg_a_section: macro
     M_play_note note_G, 3, et
     M_play_note note_Bb, 3, et
     M_play_note note_G, 3, et
+    ;M_play_note note_Eb, 3, et
+    endm
+
+M_psg_a_02: macro
     M_play_note note_Eb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_C, 4, et
+    M_play_note note_Eb, 4, et
+    M_play_note note_C, 4, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_C, 4, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_G, 3, et
+    endm
+
+M_psg_a_03: macro
+    M_play_note note_C, 3, et
+    M_play_note note_Eb, 3, et
+    M_play_note note_F, 3, et
+    M_play_note note_Eb, 3, et
+    M_play_note note_F, 3, et
+    M_play_note note_A, 3, et
+    M_play_note note_C, 4, et
+    M_play_note note_A, 3, et
+    M_play_note note_F, 3, et
+    M_play_note note_A, 3, et
+    M_play_note note_F, 3, et
+    M_play_note note_Eb, 3, et
+    endm
+
+M_psg_a_04: macro
+    M_play_note note_A, 2, et
+    M_play_note note_C, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_C, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_A, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_G, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_C, 3, et
+    endm
+
+M_psg_a_05: macro
+    M_play_note note_Db, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_E, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_Db, 4, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_Bb, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_E, 3, et
+    endm
+
+M_psg_a_06: macro
+    M_play_note note_Eb, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_Ab, 3, et
+    M_play_note note_Gb, 3, et
+    M_play_note note_Ab, 3, et
+    M_play_note note_B, 3, et
+    M_play_note note_Eb, 4, et
+    M_play_note note_B, 3, et
+    M_play_note note_Ab, 3, et
+    M_play_note note_B, 3, et
+    M_play_note note_Ab, 3, et
+    M_play_note note_Gb, 3, et
+    endm
+
+M_psg_a_07: macro
+    M_play_note note_G, 3, et
+    M_play_note note_B, 3, et
+    M_play_note note_D, 4, et
+    M_play_note note_B, 3, et
+    M_play_note note_D, 4, et
+    M_play_note note_E, 4, et
+    M_play_note note_G, 4, et
+    M_play_note note_E, 4, et
+    M_play_note note_D, 4, et
+    M_play_note note_E, 4, et
+    M_play_note note_D, 4, et
+    M_play_note note_B, 3, et
+    
+    M_play_note note_G, 3, et
+    M_play_note note_B, 3, et
+    M_play_note note_D, 4, et
+    M_play_note note_B, 3, et
+    M_play_note note_D, 4, et
+    M_play_note note_E, 4, et
+    M_play_note note_G, 4, et
+    M_play_note note_E, 4, et
+    M_play_note note_G, 4, et
+    M_play_note note_B, 4, et
+    M_play_note note_D, 5, et
+    M_play_note note_G, 5, et
+    endm
+    
+M_psg_wait_16_measures: macro
+    rept    16
+    M_play_rest wn
+    endr
     endm
 
 cza_3_psg0:
@@ -160,8 +269,33 @@ cza_3_psg2:
     dc.b    sc_load_inst
     even
     dc.l    Inst_psg_pluck
+    
+    ;M_psg_wait_16_measures
 
-    M_psg_a_section
+    ; M_psg_a_01
+    ; M_play_note note_Eb, 3, et
+    ; M_psg_a_01
+    ; M_play_note note_C, 3, et
+    ; M_psg_a_02
+    ; M_psg_a_02
+
+    ; M_psg_a_01
+    ; M_play_note note_Eb, 3, et
+    ; M_psg_a_01
+    ; M_play_note note_Eb, 3, et
+    ; M_psg_a_03
+    ; M_psg_a_03
+    
+    ; M_psg_a_04
+    ; M_psg_a_04
+    ; M_psg_a_05
+    ; M_psg_a_05
+    
+    ; M_psg_a_06
+    ; M_psg_a_06
+    M_psg_a_07
+    M_play_rest hn
+    M_play_rest hn
     
     dc.b    sc_loop
     even
