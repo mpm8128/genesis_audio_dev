@@ -104,10 +104,10 @@ fm_stream_jumptable:
     dc.l    stream_fm_keyoff    
     dc.l    stream_fm_load_instrument
     dc.l    stream_fm_reg_write
-    dc.l    stream_hold
+    dc.l    stream_fm_hold
 
 ;==============================================================
-;   stream_hold
+;   stream_fm_hold
 ;   code: sc_hold
 ;
 ;   waits for [duration]
@@ -117,7 +117,7 @@ fm_stream_jumptable:
 ;   a4 - stream pointer
 ;       b   time to wait
 ;==============================================================
-stream_hold:
+stream_fm_hold:
     move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
     jmp exit_fm_stream                     ;cleanup and return
 
@@ -252,7 +252,7 @@ handle_all_psg_channels:
     
     ;for each channel
 @loop_psg_ch:
-    tst.b   psg_ch_inst_flags(a5)   ;if channel is disabled
+    btst  #7, psg_ch_inst_flags(a5)   ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_psg_stream           ;   read stream events
@@ -301,7 +301,7 @@ psg_stream_jumptable:
     dc.l    stream_psg_keyoff
     dc.l    stream_psg_load_instrument
     dc.l    stream_psg_reg_write
-    dc.l    stream_hold
+    dc.l    stream_psg_hold
     
     ;TODO
 stream_psg_reg_write:
@@ -382,6 +382,12 @@ stream_psg_loop:
 
     bra read_psg_stream     ;read more from stream
 
+
+stream_psg_hold:
+    move.b  (a4)+, psg_ch_wait_time(a5)      ;set note duration
+    jmp exit_psg_stream                     ;cleanup and return
+
+
 ;==============================================================
 ;   stream_psg_keyon
 ;   code: sc_keyon
@@ -406,10 +412,9 @@ stream_psg_keyon:
     ;save to struct
     move.w  d1, psg_ch_base_freq(a5)
     move.w  d1, psg_ch_adj_freq(a5)
-    move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
-    andi.b  #0x80, d0       ;clear everything but the "enable" bit
-    bset    #6, d0                      ;set "keyon" flag
-    move.b  d0, psg_ch_inst_flags(a5)   ;write back to struct
+    
+    bset    #6, psg_ch_inst_flags(a5)   ;set "keyon" flag
+    
     move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
     bra exit_psg_stream                 ;cleanup and return
 
@@ -425,13 +430,10 @@ stream_psg_keyon:
 ;       b   note_duration
 ;==============================================================
 stream_psg_keyoff:    
-    move.b  psg_ch_inst_flags(a5), d0   ;d0 = instrument flags
-    andi.b  #0x80, d0       ;clear everything but the "enable" bit
-    ;bset    #5, d0
-    ori.b   #0x23, d0       ;set keyoff flag and release state
-    move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
+    bset  #5, psg_ch_inst_flags(a5)     ;set keyoff flag
+
     move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
-    bra exit_psg_stream             ;cleanup and return
+    bra exit_psg_stream                 ;cleanup and return
     
 ;==============================================================
 ;   handle_psg_automation
@@ -500,38 +502,47 @@ stream_psg_keyoff:
 ;==============================================================
 handle_psg_adsr:
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
-    btst    #2, d0                      ;check status bit
-    bne     @just_return         ;if nothing is playing, bail
 ;@check_keyon:
     btst    #6, d0          ;check for keyon event
     beq     @no_keyon           
                             ;else handle keyon
-    ;andi.b  #0x98, d0       ;clear bits 0-2 and bit 5-6
-    ;                        ;envelope counter, status bit, and keyon/keyoff
-    bra     @no_keyoff
+    andi.b  #0x80, d0       ;clear everything but the "enable" bit
+    move.b  psg_ch_attack_scaling(a5), psg_ch_adsr_counter(a5)
+    bra     @handle_envelope
 @no_keyon:
-;@check_keyoff:
+;@check_status
+    btst    #2, d0                      ;check status bit
+    beq     @check_keyoff         ;if clear, check keyoff
+;@channel_silent:
+    move.b  #0, d2  ;current vol = 0
+    move.b  #0, d3  ;adsr counter = 0
+    move.b  #4, d1  ;channel flags = keep status bit set
+    bra     @writeback_to_struct
+
+@check_keyoff:
     btst    #5, d0          ;check for keyoff event
     beq @no_keyoff
                             ;else handle keyoff
     bclr    #5, d0          ;clear keyoff bit
     ;ori.b   #0x03, d0       ;set bits 0-1 for release
-    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
-    bra @check_release
-@no_keyoff:
+    move.b  #0x83, d0
     
-    ;handle envelope
+    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
+    ;bra @check_release
+@no_keyoff:
+
+@handle_envelope:
     move.b  d0, d1                      ;d1 = copy of d0
     andi.b  #0x03, d1                   ;adsr bits only
     move.b  psg_ch_current_vol(a5), d2  ;d2 = cur_vol
     move.b  psg_ch_adsr_counter(a5), d3 ;d3 = adsr counter
 
 ;@check_attack:
-    cmp.b   #0x0, d1        ;check if attack
+    cmp.b   #0x00, d1        ;check if attack
     bne     @check_decay
                             ;else handle attack
 ;@check attack scaling
-    tst.b   d3                      ;if d3 < 0
+    tst.b   d3                      ;if d3 <= 0
     ble     @apply_attack           ;   apply attack
                                     ;else 
     subq    #1, d3                  ;   d3--
@@ -549,7 +560,7 @@ handle_psg_adsr:
     cmp.b   #0x01, d1               ;check decay
     bne     @check_sustain
 ;@check decay scaling
-    tst.b   d3                      ;if d3 < 0
+    tst.b   d3                      ;if d3 <= 0
     ble     @apply_decay            ;   apply decay
                                     ;else 
     subq    #1, d3                  ;   d3--
@@ -567,6 +578,8 @@ handle_psg_adsr:
     cmp.b   #0x02, d1           ;check sustain
     beq     @cleanup_and_return ;don't do anything for sustain
 @check_release:
+    cmp.b   #0x03, d1
+    bne     @just_return
 ;@check release scaling
     tst.b   d3                      ;if d3 <= 0
     ble     @apply_release          ;   apply release
@@ -586,11 +599,9 @@ handle_psg_adsr:
 @writeback_to_struct:
     move.b  d2, psg_ch_current_vol(a5)  ;writeback vol
     move.b  d3, psg_ch_adsr_counter(a5) ;writeback adsr counter
-    ;bra @cleanup_and_return
-
-
+    bra @cleanup_and_return
 @cleanup_and_return:
-    andi.b  #0xF0, d0                   ;mask off low bits
+    andi.b  #0x80, d0                   ;mask off low bits
     or.b    d1, d0                      ;d0 |= d1
     move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
 @just_return:
@@ -660,8 +671,9 @@ note_B      rs.b    1
 ;============================================================================
 ;   Song macros and includes
 ;============================================================================
-M_play_note: macro note, octave, duration
-    dc.b    sc_keyon, \note, \octave, \duration   ;-1 because of quirks
+
+M_play_shortnote: macro note, octave, duration
+    dc.b    sc_keyon, \note, \octave, \duration
     endm
 
 M_play_longnote: macro note, octave, duration
@@ -673,11 +685,19 @@ longtime = (\duration-1)
 longtime = (longtime-255)
     until   (longtime<256)
     
-    dc.b    sc_hold, longtime                     ;-3 because of quirks I really need to fix
+    dc.b    sc_hold, longtime
+    endm
+    
+M_play_note: macro note, octave, duration
+    if (\duration<256)
+    M_play_shortnote \note, \octave, \duration
+    else
+    M_play_longnote \note, \octave, \duration
+    endc
     endm
 
-M_play_rest: macro duration
-    dc.b    sc_keyoff, \duration                   ;-1 because of quirks
+M_play_shortrest: macro duration
+    dc.b    sc_keyoff, \duration
     endm
 
 M_play_longrest: macro duration
@@ -689,10 +709,17 @@ longtime = (\duration-1)
 longtime = (longtime-255)
     until   (longtime<256)
     
-    dc.b    sc_hold, longtime                     ;-3 because of quirks I really need to fix
+    dc.b    sc_hold, longtime
     endm
 
+M_play_rest: macro duration
+    if (\duration<256)
+    M_play_shortrest \duration
+    else
+    M_play_longrest \duration
+    endc
+    endm
     
     include 'demo_song.asm'
-    include 'demo_agr_14.asm'
+    ;include 'demo_agr_14.asm'
     include 'demo_cza_3.asm'

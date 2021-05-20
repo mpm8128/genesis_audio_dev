@@ -270,32 +270,30 @@ cza_3_psg2:
     even
     dc.l    Inst_psg_pluck
     
-    ;M_psg_wait_16_measures
+    M_psg_wait_16_measures
 
-    ; M_psg_a_01
-    ; M_play_note note_Eb, 3, et
-    ; M_psg_a_01
-    ; M_play_note note_C, 3, et
-    ; M_psg_a_02
-    ; M_psg_a_02
+    M_psg_a_01
+    M_play_note note_Eb, 3, et
+    M_psg_a_01
+    M_play_note note_C, 3, et
+    M_psg_a_02
+    M_psg_a_02
 
-    ; M_psg_a_01
-    ; M_play_note note_Eb, 3, et
-    ; M_psg_a_01
-    ; M_play_note note_Eb, 3, et
-    ; M_psg_a_03
-    ; M_psg_a_03
+    M_psg_a_01
+    M_play_note note_Eb, 3, et
+    M_psg_a_01
+    M_play_note note_Eb, 3, et
+    M_psg_a_03
+    M_psg_a_03
     
-    ; M_psg_a_04
-    ; M_psg_a_04
-    ; M_psg_a_05
-    ; M_psg_a_05
+    M_psg_a_04
+    M_psg_a_04
+    M_psg_a_05
+    M_psg_a_05
     
-    ; M_psg_a_06
-    ; M_psg_a_06
+    M_psg_a_06
+    M_psg_a_06
     M_psg_a_07
-    M_play_rest hn
-    M_play_rest hn
     
     dc.b    sc_loop
     even

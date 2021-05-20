@@ -87,6 +87,8 @@ PSG_Init:
     moveq   #3, d7
 @loop_disable_psg_ch:
     clr.b   psg_ch_inst_flags(a5)
+    bset.b  #2, psg_ch_inst_flags(a5)
+    ;move.b  #0x04, psg_ch_inst_flags(a5)
     adda.w  #psg_ch_size, a5
     dbf d7, @loop_disable_psg_ch
 	rts
