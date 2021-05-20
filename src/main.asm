@@ -84,17 +84,8 @@ demo_init:
 ;   demo_psg_init
 ;   demonstrates basic PSG by playing a note
 ;==============================================================
-demo_psg_init:
-    
+demo_psg_init: 
     ;psg channels
-    ; lea demo_psg_0, a0
-    ; lea ch_psg_0, a5
-    
-    ; move.b  #0x80, psg_ch_inst_flags(a5)
-    ; move.b  #0, psg_ch_channel(a5)
-    ; move.l  a0, psg_ch_stream_ptr(a5)
-
-    
     lea cza_3_psg0, a0
     lea ch_psg_0, a5
     
@@ -117,12 +108,12 @@ demo_psg_init:
     move.l  a0, psg_ch_stream_ptr(a5)
 
     ;noise channel
-    ; lea demo_noise, a0
-    ; lea ch_psg_noise, a5
+    lea cza3_noise, a0
+    lea ch_psg_noise, a5
     
-    ; move.b  #0x80, psg_ch_inst_flags(a5)
-    ; move.b  #3, psg_ch_channel(a5)
-    ; move.l  a0, psg_ch_stream_ptr(a5)
+    move.b  #0x80, psg_ch_inst_flags(a5)
+    move.b  #3, psg_ch_channel(a5)
+    move.l  a0, psg_ch_stream_ptr(a5)
 
     rts
 

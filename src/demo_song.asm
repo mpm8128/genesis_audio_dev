@@ -1,6 +1,39 @@
 ; demo_song
 
-qn  set 30
+qn  set 60
+wn  set qn
+
+M_noise_a_section: macro
+    M_play_note 0, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 1, 1, wn
+    M_play_rest wn
+    M_play_note 5, 1, wn
+    M_play_rest wn
+
+    M_play_note 2, 1, wn
+    M_play_rest wn
+    M_play_note 6, 1, wn
+    M_play_rest wn
+    M_play_note 3, 1, wn
+    M_play_rest wn
+    M_play_note 7, 1, wn
+    M_play_rest wn
+    endm
+
+demo_noise:
+    dc.b    sc_load_inst
+    even
+    dc.l    Inst_noise_waves
+    rept 8
+    M_noise_a_section
+    endr
+    dc.b    sc_loop
+    even
+    dc.l    demo_noise
+
 
 demo_psg_0:
     dc.b    sc_load_inst

@@ -88,7 +88,6 @@ PSG_Init:
 @loop_disable_psg_ch:
     clr.b   psg_ch_inst_flags(a5)
     bset.b  #2, psg_ch_inst_flags(a5)
-    ;move.b  #0x04, psg_ch_inst_flags(a5)
     adda.w  #psg_ch_size, a5
     dbf d7, @loop_disable_psg_ch
 	rts
@@ -142,8 +141,8 @@ PSG_SetVolume:
 ;==============================================================
 PSG_SetFrequency:
     ;moveq   #0, d3          ;clear noise flag
-    ;cmp.b   #3, d0          ;if noise channel
-    ;bne     @skip_noise_flag
+    cmp.b   #3, d0          ;if noise channel
+    beq     PSG_set_noise_mode
     ;moveq   #1, d3          ;set noise flag
 ;@skip_noise_flag
 	move.w d1, d2	        ; Split the frequency into two bytes
@@ -163,6 +162,12 @@ PSG_SetFrequency:
     
 ;==============================================================
 ;   PSG_set_noise_mode
+	; d0.b - Channel index (3)
+	; d1.w - noise mode (0-7)
 ;==============================================================
 PSG_set_noise_mode:
+    ori.b   #0xE0, d1
+    move.b  d1, psg_control
+    ;bclr    #7, d1
+    ;move.b  d1, psg_control
     rts

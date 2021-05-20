@@ -301,11 +301,25 @@ cza_3_psg2:
 
 ;====================================
 M_noise_a_section: macro
-    M_play_note 6, 2, wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
+    M_play_rest wn
+    M_play_note 4, 1, wn
     M_play_rest wn
     endm
 
-demo_noise:
+cza3_noise:
     dc.b    sc_load_inst
     even
     dc.l    Inst_noise_waves
@@ -314,7 +328,7 @@ demo_noise:
     endr
     dc.b    sc_loop
     even
-    dc.l    demo_noise
+    dc.l    cza3_noise
 
 
     modend

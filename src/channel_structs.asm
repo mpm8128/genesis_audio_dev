@@ -5,7 +5,7 @@
 ;PSG channel instrument information
 psg_ch_inst_ptr         rs.l    1   ;pointer to instrument data on ROM
 psg_ch_inst_flags       rs.b    1   
-    ;EKOx xSaa
+    ;EKOP xSaa
     ;bits 0-1: "aa" - envelope bits
     ;   00 = attack
     ;   01 = decay
@@ -14,7 +14,7 @@ psg_ch_inst_flags       rs.b    1
     ;bit 2 - status bit - set to 0 while note is playing
     ;   gets set to 1 after release fades to zero
     ;bit 3 - unused
-    ;bit 4 - unused
+    ;bit 4 - "P" - pitch update   - 1 if new pitch
     ;bit 5 - "O" - keyoff - set to 1 if we just 
     ;   got a keyoff event from the stream. This
     ;   will get cleared when we actually write 

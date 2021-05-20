@@ -132,9 +132,9 @@ Inst_horn_2:
             0xC0                        ;lr_amfm
     
 Inst_noise_waves:
-            ;Ar     ML    D    S     R
-    dc.b    0x01, 0x0F, 0x01, 0x00, 0x01, 0x00
-    dc.b    0x01,       0x10,       0x01
+            ;Ar     ML    D    S     R     NM
+    dc.b    0x01, 0x0F, 0x01, 0x00, 0x01, 0x05
+    dc.b    0x01,       0x10,       0x05
     
 Inst_psg_bass:
         ;   A      ML    D      S     R    NM

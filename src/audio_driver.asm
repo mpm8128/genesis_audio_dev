@@ -414,6 +414,7 @@ stream_psg_keyon:
     move.w  d1, psg_ch_adj_freq(a5)
     
     bset    #6, psg_ch_inst_flags(a5)   ;set "keyon" flag
+    bset    #4, psg_ch_inst_flags(a5)   ;set "pitch update" flag
     
     move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
     bra exit_psg_stream                 ;cleanup and return
@@ -506,7 +507,7 @@ handle_psg_adsr:
     btst    #6, d0          ;check for keyon event
     beq     @no_keyon           
                             ;else handle keyon
-    andi.b  #0x80, d0       ;clear everything but the "enable" bit
+    andi.b  #0x90, d0       ;clear everything but the "enable" bit
     move.b  psg_ch_attack_scaling(a5), psg_ch_adsr_counter(a5)
     bra     @handle_envelope
 @no_keyon:
@@ -525,7 +526,7 @@ handle_psg_adsr:
                             ;else handle keyoff
     bclr    #5, d0          ;clear keyoff bit
     ;ori.b   #0x03, d0       ;set bits 0-1 for release
-    move.b  #0x83, d0
+    move.b  #0x93, d0
     
     move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
     ;bra @check_release
@@ -601,7 +602,7 @@ handle_psg_adsr:
     move.b  d3, psg_ch_adsr_counter(a5) ;writeback adsr counter
     bra @cleanup_and_return
 @cleanup_and_return:
-    andi.b  #0x80, d0                   ;mask off low bits
+    andi.b  #0x90, d0                   ;mask off low bits
     or.b    d1, d0                      ;d0 |= d1
     move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
 @just_return:
@@ -615,9 +616,15 @@ psg_driver_write_to_chip:
     move.b  psg_ch_current_vol(a5), d1  ;d1 = vol
     jsr PSG_SetVolume       ;(channel (d0.b), vol (d1.b))
     
+    move.b psg_ch_inst_flags(a5), d5
+    btst    #4, d5  ;check pitch update flag
+    beq     @return
+    bclr    #4, d5  ;clear pitch update flag
     move.b  psg_ch_channel(a5), d0      ;d0 = channel
     move.w  psg_ch_adj_freq(a5), d1      ;d0 = channel
     jsr PSG_SetFrequency    ;(channel (d0.b), counter (d1.w))
+    move.b  d5, psg_ch_inst_flags(a5)
+@return
     rts
 ;==============================================================
 ;   stream codes
