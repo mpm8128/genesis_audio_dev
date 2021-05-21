@@ -49,16 +49,17 @@
     ;F - 3-bit LFO frequency modulation level
     
 
-size_instrument_data    equ (size_operator_data*4) + 2    
+size_instrument_data    equ (size_operator_data*4) + 2   
+ 
 Inst_test_organ_0:
     ;       op1   op2   op3   op4 
     dc.b    0x22, 0x33, 0x54, 0x61, &   ;det_mul
-            0x12, 0x12, 0x12, 0x12, &   ;tl
-            0x0F, 0x0F, 0x0F, 0x0F, &   ;rs_ar
-            0x10, 0x10, 0x10, 0x10, &   ;am_d1r
+            0x40, 0x40, 0x40, 0x12, &   ;tl
+            0x0F, 0x01, 0x08, 0x0F, &   ;rs_ar
+            0x11, 0x10, 0x10, 0x10, &   ;am_d1r
             0x00, 0x00, 0x00, 0x00, &   ;d2r
             0x0F, 0x0F, 0x0F, 0x0F, &   ;sl_rr
-            0x3F, &                     ;fb_alg
+            0x01, &                     ;fb_alg
             0xC0                        ;lr_amfm
     
 Inst_test_organ_1:

@@ -125,8 +125,20 @@ exit_fm_stream:
     move.l   a4, fm_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
 
-    ;TODO
+;==============================================================\
+;   fm reg write
+;parameters
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b   register address
+;       b   value to write
+;==============================================================
 stream_fm_reg_write:
+    move.b  (a4)+, d0               ;d0 = address
+    move.b  (a4)+, d1               ;d1 = value
+    
+    jsr     write_register_opn2
+    
     bra read_fm_stream  ;read more from stream
 
 ;==============================================================
@@ -205,8 +217,8 @@ stream_fm_loop:
 ;       b   note_duration
 ;==============================================================
 stream_fm_keyon:
-    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
-    jsr keyoff_FM_channel
+    ;move.b  fm_ch_channel(a5), d2           ;d2 = channel number
+    ;jsr keyoff_FM_channel
     
     move.b  (a4)+,  d6                      ;d6 = note name
     move.b  d6, fm_ch_note_name(a5)         ;write to struct also
@@ -222,8 +234,8 @@ stream_fm_keyon:
     move.b  fm_ch_channel(a5), d2           ;d2 = channel number
     jsr     keyon_FM_channel                ;write keyon for fm channel
 
-    move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
-    jmp exit_fm_stream                         ;cleanup and return
+    ;move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
+    jmp read_fm_stream                         ;cleanup and return
     
 ;==============================================================
 ;   stream_fm_keyoff
@@ -239,9 +251,9 @@ stream_fm_keyon:
 stream_fm_keyoff:
     move.b  fm_ch_channel(a5), d2       ;d2 = channel number
     jsr     keyoff_FM_channel           ;write keyoff to 2612
-    move.b  (a4)+, fm_ch_wait_time(a5)  ;set silence duration
+    ;move.b  (a4)+, fm_ch_wait_time(a5)  ;set silence duration
 
-    jmp exit_fm_stream                     ;cleanup and return
+    jmp read_fm_stream                     ;cleanup and return
     
 ;============================================================================
 ;   handle_all_psg_channels
@@ -380,7 +392,7 @@ stream_psg_loop:
     move.l  (a4), psg_ch_stream_ptr(a5)
     move.l  psg_ch_stream_ptr(a5), a4
 
-    bra read_psg_stream     ;read more from stream
+    jmp read_psg_stream     ;read more from stream
 
 
 stream_psg_hold:
@@ -416,8 +428,8 @@ stream_psg_keyon:
     bset    #6, psg_ch_inst_flags(a5)   ;set "keyon" flag
     bset    #4, psg_ch_inst_flags(a5)   ;set "pitch update" flag
     
-    move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
-    bra exit_psg_stream                 ;cleanup and return
+    ;move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
+    jmp read_psg_stream                 ;cleanup and return
 
 ;==============================================================
 ;   stream_psg_keyoff
@@ -433,8 +445,9 @@ stream_psg_keyon:
 stream_psg_keyoff:    
     bset  #5, psg_ch_inst_flags(a5)     ;set keyoff flag
 
-    move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
-    bra exit_psg_stream                 ;cleanup and return
+    ;move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
+    ;bra exit_psg_stream                 ;cleanup and return
+    jmp read_psg_stream
     
 ;==============================================================
 ;   handle_psg_automation
@@ -680,19 +693,21 @@ note_B      rs.b    1
 ;============================================================================
 
 M_play_shortnote: macro note, octave, duration
-    dc.b    sc_keyon, \note, \octave, \duration
+    ;dc.b    sc_keyon, \note, \octave, \duration
+    dc.b    sc_keyon, \note, \octave
+    dc.b    sc_hold, \duration
+    dc.b    sc_keyoff
     endm
 
 M_play_longnote: macro note, octave, duration
-longtime = (\duration-1)
-    dc.b    sc_keyon, \note, \octave, 0
-    
+longtime = (\duration)
+    dc.b    sc_keyon, \note, \octave
     do
     dc.b    sc_hold, 255
 longtime = (longtime-255)
     until   (longtime<256)
-    
     dc.b    sc_hold, longtime
+    dc.b    sc_keyoff
     endm
     
 M_play_note: macro note, octave, duration
@@ -702,20 +717,27 @@ M_play_note: macro note, octave, duration
     M_play_longnote \note, \octave, \duration
     endc
     endm
+    
+M_start_note: macro note, octave
+    dc.b    sc_keyon, \note, \octave
+    endm
+    
+M_stop_note: macro
+    dc.b    sc_keyoff
+    endm
 
 M_play_shortrest: macro duration
-    dc.b    sc_keyoff, \duration
+    dc.b    sc_keyoff
+    dc.b    sc_hold, \duration
     endm
 
 M_play_longrest: macro duration
-longtime = (\duration-1)
-    dc.b    sc_keyoff, 0
-    
+longtime = (\duration)
+    dc.b    sc_keyoff
     do
     dc.b    sc_hold, 255
 longtime = (longtime-255)
     until   (longtime<256)
-    
     dc.b    sc_hold, longtime
     endm
 
@@ -728,5 +750,108 @@ M_play_rest: macro duration
     endm
     
     include 'demo_song.asm'
-    ;include 'demo_agr_14.asm'
+    include 'demo_agr_14.asm'
     include 'demo_cza_3.asm'
+
+;================================================
+    RSRESET
+offset_demo         rs.l    1
+offset_cza_3        rs.l    1
+offset_agr_14       rs.l    1
+num_songs           rs.l    0
+;
+song_table:
+    dc.l    demo_song_parts_table
+    dc.l    cza_3_parts_table
+    dc.l    agr_14_parts_table
+    
+    
+;================================================
+;   parameter - d0.w    index of song
+;================================================
+load_song_from_parts_table:
+    lea     song_table, a0  ;a0 = *songtable
+    movea.l (a0,d0.w), a0   ;a0 = songtable(d0)
+                            ;a0 = *parts_table
+    
+    ;load FM channels
+@load_channel_1:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_channel_2
+    lea ch_fm_1, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #0, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+    
+@load_channel_2:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_channel_3
+    lea ch_fm_2, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #1, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+
+@load_channel_3:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_channel_4
+    lea ch_fm_3, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #2, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+
+@load_channel_4:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_channel_5
+    lea ch_fm_4, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #4, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+
+@load_channel_5:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_channel_6
+    lea ch_fm_5, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #5, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+    
+@load_channel_6:
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @load_psg_channels
+    lea ch_fm_6, a5     ;channel 
+    move.b #1, fm_ch_is_enabled(a5)
+    move.b #6, fm_ch_channel(a5)
+    move.l  a1, fm_ch_stream_ptr(a5)
+
+;do PSG
+@load_psg_channels:
+
+    moveq   #3, d1  ;loop counter
+    move.b  #0, d2  ;channel number
+    lea ch_psg_0, a5
+@for_each_psg_channel
+    movea.l (a0)+, a1
+    move.l  a1, d0
+    tst.b   d0
+    beq     @next_psg_channel
+    move.b  #0x80, psg_ch_inst_flags(a5)
+    move.b  d2, psg_ch_channel(a5)
+    move.l  a1, psg_ch_stream_ptr(a5)
+@next_psg_channel
+    adda.w  #psg_ch_size, a5
+    addi.b  #1, d2
+    dbf d1, @for_each_psg_channel
+
+    rts

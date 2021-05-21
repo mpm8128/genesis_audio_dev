@@ -3,11 +3,25 @@
     module
 
 sn  set     5
-en  set     2*sn
-qn  set     2*en
-hn  set     2*qn
-wn  set     2*hn
+en  set     (2*sn)
+qn  set     (2*en)
+hn  set     (2*qn)
+wn  set     (2*hn)
 
+agr_14_parts_table:
+    dc.l    agr_14_ch0          ;FM ch1
+    dc.l    agr_14_ch1          ;FM ch2
+    dc.l    0x00000000          ;FM ch3
+    dc.l    0x00000000          ;FM ch4
+    dc.l    0x00000000          ;FM ch5
+    dc.l    0x00000000          ;FM ch6
+    
+    ;no PSG
+    dc.l    0x00000000          ;0
+    dc.l    0x00000000          ;1
+    dc.l    0x00000000          ;2
+    dc.l    0x00000000          ;noise
+    
 ;==============================================================
 ;   Lead    
 ;==============================================================
@@ -281,8 +295,8 @@ M_ch0__c_section    macro
 agr_14_ch0:
     dc.b    sc_load_inst
     even
-    ;dc.l    Inst_percussive_organ_1
-    dc.l    Inst_psg_organ
+    dc.l    Inst_percussive_organ_1
+    ;dc.l    Inst_psg_organ
     M_ch0__a_section
     M_ch0__a_section
     M_ch0__b_section
@@ -313,50 +327,100 @@ M_whole_measure_gallop: macro note, octave
     endm
     
 M_ch1__a_section:   macro
-    M_whole_measure_gallop  note_E, 4
-    M_half_measure_gallop   note_C, 4
-    M_half_measure_gallop   note_D, 4
+    M_whole_measure_gallop  note_E, 3
+    M_half_measure_gallop   note_C, 3
+    M_half_measure_gallop   note_D, 3
     
-    M_whole_measure_gallop  note_E, 4
-    M_half_measure_gallop   note_C, 4
-    M_half_measure_gallop   note_D, 4
+    M_whole_measure_gallop  note_E, 3
+    M_half_measure_gallop   note_C, 3
+    M_half_measure_gallop   note_D, 3
     
-    M_whole_measure_gallop  note_A, 3
-    M_half_measure_gallop   note_C, 4
-    M_half_measure_gallop   note_B, 3
+    M_whole_measure_gallop  note_A, 2
+    M_half_measure_gallop   note_C, 3
+    M_half_measure_gallop   note_B, 2
     
-    M_whole_measure_gallop  note_G, 3
-    M_half_measure_gallop   note_C, 4
-    M_half_measure_gallop   note_E, 3
+    M_whole_measure_gallop  note_G, 2
+    M_half_measure_gallop   note_C, 3
+    M_half_measure_gallop   note_E, 2
     endm
     
-; M_ch1__b_section:   macro
-    ; endm
+;fast octaves + rest
+M_ch1_M_b_octave_jump   macro
+    M_play_note note_E, 2, sn
+    M_play_note note_E, 2, sn
+    M_play_note note_E, 2, sn
+    M_play_note note_E, 2, sn
+    M_play_rest en
+    endm
+
+;fast octaves, then quarter-note G
+M_ch1__b_01:    macro
+    M_ch1_M_b_octave_jump
+    M_ch1_M_b_octave_jump
+    M_play_note note_G, 2, qn
+    endm
     
-M_ch1__c_section:   macro
-    M_whole_measure_gallop  note_B, 3
-    M_whole_measure_gallop  note_G, 3
-    M_whole_measure_gallop  note_A, 3
-    M_half_measure_gallop   note_Fs, 3
-    M_play_note note_Fs, 3, sn
+;fast octaves, then stacatto walk down
+M_ch1__b_02:    macro
+    M_ch1_M_b_octave_jump
+    M_play_note note_E, 2, sn
+    M_play_note note_E, 2, sn
+    M_play_note note_E, 2, sn
     M_play_rest sn
-    M_play_note note_G, 3, sn
+    M_play_note note_D, 3, sn
     M_play_rest sn
-    M_play_note note_A, 3, sn
-    M_play_rest sn
-    M_play_note note_As, 3, sn
-    M_play_rest sn
-    M_whole_measure_gallop  note_B, 3
-    M_whole_measure_gallop  note_G, 3
-    M_whole_measure_gallop  note_A, 3
-    M_half_measure_gallop   note_D, 3
-    M_play_note note_E, 3, sn
-    M_play_rest sn
-    M_play_note note_E, 3, sn
-    M_play_rest sn
-    M_play_note note_E, 3, sn
+    M_play_note note_C, 3, sn
     M_play_rest sn
     M_play_note note_B, 2, sn
+    M_play_rest sn
+    endm
+    
+;fast octaves, then stacatto walk up
+M_ch1__b_03:    macro
+    M_ch1_M_b_octave_jump
+    M_play_note note_E, 2, sn
+    M_play_note note_G, 2, sn
+    M_play_note note_E, 2, sn
+    M_play_rest sn
+    M_play_note note_Fs, 2, sn
+    M_play_rest sn
+    M_play_note note_G, 2, sn
+    M_play_rest sn
+    M_play_note note_A, 2, sn
+    M_play_rest sn
+    endm
+    
+M_ch1__b_section:   macro
+    M_ch1__b_01
+    M_ch1__b_02
+    M_ch1__b_01
+    M_ch1__b_03
+    endm
+    
+M_ch1__c_section:   macro
+    M_whole_measure_gallop  note_B, 2
+    M_whole_measure_gallop  note_G, 2
+    M_whole_measure_gallop  note_A, 2
+    M_half_measure_gallop   note_Fs, 2
+    M_play_note note_Fs, 2, sn
+    M_play_rest sn
+    M_play_note note_G, 2, sn
+    M_play_rest sn
+    M_play_note note_A, 2, sn
+    M_play_rest sn
+    M_play_note note_As, 2, sn
+    M_play_rest sn
+    M_whole_measure_gallop  note_B, 2
+    M_whole_measure_gallop  note_G, 2
+    M_whole_measure_gallop  note_A, 2
+    M_half_measure_gallop   note_D, 2
+    M_play_note note_E, 2, sn
+    M_play_rest sn
+    M_play_note note_E, 2, sn
+    M_play_rest sn
+    M_play_note note_E, 2, sn
+    M_play_rest sn
+    M_play_note note_B, 1, sn
     M_play_rest sn
     endm
     
@@ -364,11 +428,11 @@ M_ch1__c_section:   macro
 agr_14_ch1:
     dc.b    sc_load_inst
     even
-    ;dc.l    Inst_bass_and_hat_1
-    dc.l    Inst_psg_bass
+    dc.l    Inst_bass_and_hat_1
+    ;dc.l    Inst_psg_bass
     M_ch1__a_section
     M_ch1__a_section
-    M_ch0__b_section
+    M_ch1__b_section
     M_ch1__c_section
     M_ch1__c_section
     dc.b sc_loop

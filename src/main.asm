@@ -75,8 +75,10 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    jsr demo_psg_init
-    jsr demo_fm_init
+    ;jsr demo_psg_init
+    ;jsr demo_fm_init
+    move.w  #offset_demo, d0
+    jsr load_song_from_parts_table
     jsr demo_tiles_init
     rts
 
@@ -169,10 +171,15 @@ demo_tiles_init:
     ; move.w #tile_id_blank, vdp_data		
     ; move.w #tile_id_1, vdp_data
     ; move.w #tile_id_4, vdp_data
-    move.w #tile_id_c, vdp_data		; 
-    move.w #tile_id_z, vdp_data		; 
     move.w #tile_id_a, vdp_data		; 
-    move.w #tile_id_3, vdp_data		; 
+    move.w #tile_id_blank, vdp_data		; 
+    move.w #tile_id_m, vdp_data		; 
+    move.w #tile_id_y, vdp_data		; 
+    move.w #tile_id_s, vdp_data		; 
+    move.w #tile_id_t, vdp_data		; 
+    move.w #tile_id_e, vdp_data		; 
+    move.w #tile_id_r, vdp_data		; 
+    move.w #tile_id_y, vdp_data		; 
 
    
     rts

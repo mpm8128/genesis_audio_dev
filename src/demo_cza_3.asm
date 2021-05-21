@@ -4,9 +4,22 @@
 
 et  set     17 ;qn/3
 qn  set     51
-hn  set     2*qn
-wn  set     2*hn
-tm  set     2*wn
+hn  set     (2*qn)
+wn  set     (2*hn)
+tm  set     (2*wn)
+
+cza_3_parts_table:
+    dc.l    cza_3_bass          ;FM ch1
+    dc.l    cza_3_harmony_1     ;FM ch2
+    dc.l    cza_3_harmony_2     ;FM ch3
+    dc.l    cza_3_lead_horn     ;FM ch4
+    dc.l    0x00000000          ;FM ch5
+    dc.l    0x00000000          ;FM ch6
+    
+    dc.l    cza_3_psg0          ;PSG ch0
+    dc.l    cza_3_psg1          ;PSG ch1
+    dc.l    cza_3_psg2          ;PSG ch2
+    dc.l    cza3_noise          ;noise
 
 
 ;==========================
@@ -137,6 +150,8 @@ cza_3_bass:
     dc.l cza_3_bass
     
 ;====================================
+;PSG echo plucks
+
 M_psg_a_01: macro
     M_play_note note_C, 3, et
     M_play_note note_Eb, 3, et
@@ -256,9 +271,7 @@ M_psg_a_07: macro
     endm
     
 M_psg_wait_16_measures: macro
-    rept    16
-    M_play_rest wn
-    endr
+    M_play_rest (wn*16)
     endm
 
 cza_3_psg0:
@@ -300,6 +313,8 @@ cza_3_psg2:
     dc.l    cza_3_psg2
 
 ;====================================
+;wave SE
+
 M_noise_a_section: macro
     M_play_note 4, 1, wn
     M_play_rest wn
