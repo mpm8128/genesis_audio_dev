@@ -56,7 +56,10 @@ psg_ch_noise_mode       rs.b    1   ;0-3 (0 for square-wave channels)
 psg_ch_current_vol      rs.b    1   ;0-15
 ;stream stuff
 psg_ch_wait_time        rs.w    1   ;number of frames until next stream event
+psg_ch_sequence_idx     rs.w    1   ;index into sequence table
 psg_ch_stream_ptr       rs.l    1   ;pointer to stream of audio data
+psg_ch_section_ptr      rs.l    1   ;pointer to section table
+psg_ch_sequence_ptr     rs.l    1   ;pointer to sequence table
 
 psg_ch_base_freq        rs.w    1   ;10-bit frequency register value. 
                                     ;   Can be adjusted by pitch envelopes
@@ -94,7 +97,7 @@ psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
                                     ;bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
                                     ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
                                     ;bit 7 - unused
-
+    even
 psg_ch_size             rs.w    0   ;size of the struct
 ;psg_ch_size     equ     0x20
 
@@ -107,7 +110,11 @@ fm_ch_is_enabled        rs.b    1   ;0 (disabled) or !0 (enabled)
 fm_ch_channel           rs.b    1   ;channel id (0-3)
 fm_ch_wait_time         rs.w    1   ;number of frames to hold the note for
 
+fm_ch_sequence_idx      rs.w    1
 fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
+fm_ch_section_ptr       rs.l    1
+fm_ch_sequence_ptr      rs.l    1   ;
+
 
 fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
 fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)
