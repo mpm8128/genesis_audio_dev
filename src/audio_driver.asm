@@ -277,9 +277,6 @@ stream_fm_loop:
 ;       b   note_duration
 ;==============================================================
 stream_fm_keyon:
-    ;move.b  fm_ch_channel(a5), d2           ;d2 = channel number
-    ;jsr keyoff_FM_channel
-    
     move.b  (a4)+,  d6                      ;d6 = note name
     move.b  d6, fm_ch_note_name(a5)         ;write to struct also
     ext.w   d6                              ;sign-extend to word-length
@@ -294,7 +291,6 @@ stream_fm_keyon:
     move.b  fm_ch_channel(a5), d2           ;d2 = channel number
     jsr     keyon_FM_channel                ;write keyon for fm channel
 
-    ;move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
     jmp read_fm_stream                         ;cleanup and return
     
 ;==============================================================
@@ -309,11 +305,9 @@ stream_fm_keyon:
 ;       b   note_duration
 ;==============================================================
 stream_fm_keyoff:
-    move.b  fm_ch_channel(a5), d2       ;d2 = channel number
-    jsr     keyoff_FM_channel           ;write keyoff to 2612
-    ;move.b  (a4)+, fm_ch_wait_time(a5)  ;set silence duration
-
-    jmp read_fm_stream                     ;cleanup and return
+    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    jsr     keyoff_FM_channel       ;write keyoff to 2612
+    jmp read_fm_stream              ;cleanup and return
     
 ;============================================================================
 ;   handle_all_psg_channels
@@ -324,14 +318,14 @@ handle_all_psg_channels:
     
     ;for each channel
 @loop_psg_ch:
-    btst  #7, psg_ch_inst_flags(a5)   ;if channel is disabled
+    btst  #7, psg_ch_inst_flags(a5) ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_psg_stream           ;   read stream events
     jsr handle_psg_adsr             ;   adjust with envelope
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
-    adda.w  #psg_ch_size, a5         ;next channel
+    adda.w  #psg_ch_size, a5        ;next channel
     dbf d7, @loop_psg_ch            ;loop end
     
     rts
@@ -352,8 +346,7 @@ handle_psg_stream:
 @done_waiting:
     move.l  psg_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
-    beq     stream_fm_end_section
-    ;beq     exit_psg_stream             ;if stream ptr == null, cleanup and return
+    beq     psg_load_first_section
     
 read_psg_stream:
     clr.w   d6                          ;needs to be a clean slate for the cmp ahead
@@ -377,6 +370,26 @@ psg_stream_jumptable:
     dc.l    stream_psg_hold
     dc.l    stream_psg_end_section
     
+;==============================================================
+;==============================================================
+psg_load_first_section:
+    ;load table pointers
+    movea.l     psg_ch_section_ptr(a5), a3  ;a3 = section ptr
+    movea.l     psg_ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
+
+    ;get section index from sequence_table[0]
+    clr.w   d1              ;
+    move.b  (a2), d1  ;d1.b = sequence_table[0]
+
+    ;load stream pointer from section table
+    lsl.w   #2, d1          ;longword-align
+    movea.l (a3, d1.w), a4  ;a4 = next stream pointer 
+    
+    ;write back to struct
+    moveq   #0, d0
+    move.w  d0, psg_ch_sequence_idx(a5) 
+    move.l  a4, psg_ch_stream_ptr(a5)
+    bra read_psg_stream
     
 ;============================================================================
 ;   stream_psg_end_section
@@ -395,8 +408,8 @@ stream_psg_end_section:
 
     ;increment sequence index
     clr.w   d0                          ;
-    move.b  psg_ch_sequence_idx(a5), d0 ;d0.w = old index
-    addi.b  #1, d0                      ;increment index
+    move.w  psg_ch_sequence_idx(a5), d0 ;d0.w = old index
+    addi.w  #1, d0                      ;increment index
     
     ;get section index from sequence table
     clr.w   d1              ;
@@ -407,7 +420,6 @@ stream_psg_end_section:
     bne @not_looping            ;   skip this section 
                                 ;else
                                 ;   handle looping
-    
     move.b  $1(a2, d0.w), d0    ;d0.b = looping point
     
     ;get section index from sequence table again
@@ -541,7 +553,6 @@ stream_psg_keyon:
     bset    #6, psg_ch_inst_flags(a5)   ;set "keyon" flag
     bset    #4, psg_ch_inst_flags(a5)   ;set "pitch update" flag
     
-    ;move.b  (a4)+, psg_ch_wait_time(a5) ;set note duration
     jmp read_psg_stream                 ;cleanup and return
 
 ;==============================================================
@@ -557,9 +568,6 @@ stream_psg_keyon:
 ;==============================================================
 stream_psg_keyoff:    
     bset  #5, psg_ch_inst_flags(a5)     ;set keyoff flag
-
-    ;move.b  (a4)+, psg_ch_wait_time(a5) ;set silence duration
-    ;bra exit_psg_stream                 ;cleanup and return
     jmp read_psg_stream
     
 ;==============================================================
@@ -651,7 +659,6 @@ handle_psg_adsr:
     beq @no_keyoff
                             ;else handle keyoff
     bclr    #5, d0          ;clear keyoff bit
-    ;ori.b   #0x03, d0       ;set bits 0-1 for release
     move.b  #0x93, d0
     
     move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
@@ -793,29 +800,27 @@ note_B      rs.b    1
 ;================================================
     RSRESET
 offset_demo         rs.l    2
-offset_cza_3        rs.l    2
-offset_agr_14       rs.l    2
+offset_cza3         rs.l    2
+offset_agr14        rs.l    2
 offset_mb           rs.l    2
 num_songs           rs.l    0
 
     even
 song_table:
-    ;dc.l    demo_song_parts_table
     ;       channel table,        section table
     dc.l    demo_channel_table, demo_section_table
-    dc.l    cza_3_parts_table, 0
-    dc.l    agr_14_parts_table, 0
-    dc.l    mission_briefing_parts_table, 0
+    dc.l    cza3_channel_table, cza3_section_table
+    ;dc.l    agr14_channel_table, agr14_section_table
+    ;dc.l    mission_briefing_parts_table, 0
     
     
 ;================================================
 ;   parameter - d0.w    index of song
 ;================================================
 load_song_from_parts_table:
-    lsl.w   #1, d0      ;2x longword-align d0
     lea     song_table, a0  ;a0 = *songtable
     movea.l $4(a0,d0.w), a2 ;a2 = section_table
-    movea.l $0(a0,d0.w), a0   ;a0 = channel_table
+    movea.l $0(a0,d0.w), a0 ;a0 = channel_table
                             ;[channel_table, section_table]
     
     ;load FM channels
@@ -930,6 +935,8 @@ load_song_from_parts_table:
 ;   Song macros and includes
 ;============================================================================
 
+seq_table_stop_code     equ     (-1)
+
 M_play_shortnote: macro note, octave, duration
     ;dc.b    sc_keyon, \note, \octave, \duration
     dc.b    sc_keyon, \note, \octave
@@ -990,7 +997,7 @@ M_play_rest: macro duration
     include 'instrument_defs.asm'
     
     include 'songs/demo_section_table.asm'
-    include 'songs/a_mystery.asm'
+    ;include 'songs/a_mystery.asm'
     include 'songs/agr_14.asm'
     include 'songs/cza_3.asm'
-    include 'songs/mission_briefing.asm'
+    ;include 'songs/mission_briefing.asm'
