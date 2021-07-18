@@ -74,6 +74,8 @@ read_single_controller:
     ;clear working registers
     moveq   #0, d0
     moveq   #0, d1
+    moveq   #0, d2
+    moveq   #0, d3
     
     ;--------------------
     ;read from controller
@@ -101,6 +103,8 @@ read_single_controller:
     ;Determine buttons pressed/released
     
     ;d0 = inputs this frame
+    not.b   d0          ;invert d0 so everything makes sense
+    
     move.b  (a2), d1    ;d1 = inputs last frame
     
     move.b  d1, d2  ;d2 = (this frame) XOR (last frame)
@@ -123,6 +127,90 @@ read_single_controller:
     rts
     
     
+;================================================
+;   Debug Controller
+;S | A | C | B | R | L | D | U
+;================================================
+DEBUG_ctrl_1_xpos   equ     0x04
+DEBUG_ctrl_2_xpos   equ     0x14
+DEBUG_ctrl_ypos     equ     0x04
+
+    even
+DEBUG_ctrl_string:
+    dc.w    tile_id_s, tile_id_a, tile_id_c, tile_id_b
+    dc.w    tile_id_r, tile_id_l, tile_id_d, tile_id_u
+
+DEBUG_controller:
+    ;----------------
+    ;DEBUG controller init
+    
+    lea test_palette, a0        ;
+    jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
+    
+	; Write the font glyph tiles to VRAM
+	lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
+    jsr Copy_Tiles_to_VRAM
+    
+    ;get ready to write to vdp
+    lea     DEBUG_ctrl_string, a0   ;a0 = string start
+    
+    ;p1 held
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+0)*vdp_plane_width)+DEBUG_ctrl_1_xpos)*size_word)
+    lea p1_buttons_held, a1
+    jsr DEBUG_controller_output_loop
+    
+    ;p1 pressed
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+1)*vdp_plane_width)+DEBUG_ctrl_1_xpos)*size_word)
+    lea p1_buttons_pressed, a1
+    jsr DEBUG_controller_output_loop
+    
+    ;p1 released
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+2)*vdp_plane_width)+DEBUG_ctrl_1_xpos)*size_word)
+    lea p1_buttons_released, a1
+    jsr DEBUG_controller_output_loop
+
+    ;p2 held
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+0)*vdp_plane_width)+DEBUG_ctrl_2_xpos)*size_word)
+    lea p2_buttons_held, a1
+    jsr DEBUG_controller_output_loop
+    
+    ;p2 pressed
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+1)*vdp_plane_width)+DEBUG_ctrl_2_xpos)*size_word)
+    lea p2_buttons_pressed, a1
+    jsr DEBUG_controller_output_loop
+    
+    ;p2 released
+    SetVRAMWrite vram_addr_plane_a+((((DEBUG_ctrl_ypos+2)*vdp_plane_width)+DEBUG_ctrl_2_xpos)*size_word)
+    lea p2_buttons_released, a1
+    jsr DEBUG_controller_output_loop
+
+    rts
+    
+;expects address of button data in a1
+DEBUG_controller_output_loop:
+    ;-----------
+    ;check bits
+    moveq   #7, d7                  ;loop counter, pre-decremented
+    move.b  (a1), d0   ;d0 = held buttons
+    
+    
+@loop_top:
+    btst    #0, d0                  ;check LSB of held buttons
+    beq @write_nothing              ;if bit == 0, write a blank tile
+                                    ;   else write tile in string
+    lsl.w   #1, d7                  ;word-align index
+    move.w  (a0, d7.w), vdp_data    ;write a0[d7] to vdp
+    lsr.w   #1, d7                  ;un-word-align counter
+    bra @loop_continue
+    
+@write_nothing:
+    move.w  #tile_id_blank, vdp_data    ;write blank to vdp
+    
+@loop_continue:
+    lsr.b   #1, d0                  ;shift to next bit
+    dbf d7, @loop_top               ;repeat
+    
+    rts
     
     
     

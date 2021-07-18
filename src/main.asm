@@ -77,7 +77,7 @@ init_z80:
 demo_init:
     move.w  #offset_cza3, d0
     jsr load_song_from_parts_table
-    jsr demo_tiles_init
+    ;jsr demo_tiles_init
     rts
     
 ;==============================================================
@@ -111,7 +111,6 @@ demo_tiles_init:
     move.w #tile_id_r, vdp_data		; 
     move.w #tile_id_y, vdp_data		; 
 
-   
     rts
     
 
@@ -126,7 +125,10 @@ INT_VInterrupt:
     
     addi.l  #1, ram_frame_counter
     jsr get_controller_inputs
+    jsr DEBUG_controller
+    
     jsr audio_driver
+    
     
     
     M_enable_interrupts
