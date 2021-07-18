@@ -2,7 +2,7 @@
 ;================================================
 ;   Memory Map
 ;================================================
-    RSSET   0xFF0000
+    RSSET   0xFF0004
 
 p1_buttons_held         rs.b    1
 p1_buttons_pressed      rs.b    1
