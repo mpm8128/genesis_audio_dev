@@ -1,0 +1,2 @@
+0xFF0000 - general purpose RAM
+0xFF1000 - 68k audio RAM

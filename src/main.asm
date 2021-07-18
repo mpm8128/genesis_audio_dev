@@ -123,8 +123,12 @@ demo_tiles_init:
 ; Vertical interrupt - run once per frame (50hz in PAL, 60hz in NTSC)
 INT_VInterrupt:
     M_disable_interrupts
+    
     addi.l  #1, ram_frame_counter
+    jsr get_controller_inputs
     jsr audio_driver
+    
+    
     M_enable_interrupts
     rte
 
@@ -217,7 +221,7 @@ VDP_LoadRegisters:
 	rts
     
     include 'audio_driver.asm'
-
+    include 'controller_driver.asm'
 
 ; A label defining the end of ROM so we can compute the total size.
 ROM_End:
