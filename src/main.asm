@@ -1,5 +1,9 @@
     include 'vector_table.asm'
     include 'header.asm'
+    
+    ;include 'defines.asm'
+
+flag_DEBUG equ 0
 
 ;==============================================================
 ; VRAM WRITE MACROS
@@ -25,6 +29,10 @@ SetCRAMWrite: macro addr
 SetVSRAMWrite: macro addr
 	move.l  #(vdp_cmd_vsram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
 	endm
+
+M_Write_Tile: macro layer, palette, hflip, vflip, tilenum
+    move.w  #((((\layer)&$1)<<15)|(((\palette)&$3)<<13)|(((\hflip)&$1)<<12)|(((\vflip)&$1)<<11)|((\tilenum)&$7FF)), vdp_data
+    endm
 
 M_enable_interrupts: macro
     move.w  #0x2300, sr
@@ -75,8 +83,8 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    move.w  #offset_cza3, d0
-    jsr load_song_from_parts_table
+    ;move.w  #offset_demo, d0
+    ;jsr load_song_from_parts_table
     ;jsr demo_tiles_init
     rts
     
@@ -123,9 +131,14 @@ demo_tiles_init:
 INT_VInterrupt:
     M_disable_interrupts
     
-    addi.l  #1, ram_frame_counter
+    addi.l  #1, frame_counter
     jsr get_controller_inputs
+    
+    if  flag_DEBUG
     jsr DEBUG_controller
+    endif
+    
+    jsr sound_test_menu
     
     jsr audio_driver
     
@@ -224,6 +237,6 @@ VDP_LoadRegisters:
     
     include 'audio_driver.asm'
     include 'controller_driver.asm'
-
+    include 'sound_test.asm'
 ; A label defining the end of ROM so we can compute the total size.
 ROM_End:

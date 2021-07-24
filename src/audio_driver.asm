@@ -799,30 +799,105 @@ note_B      rs.b    1
   
 ;================================================
     RSRESET
+offset_silence      rs.l    2
 offset_demo         rs.l    2
 offset_cza3         rs.l    2
-offset_agr14        rs.l    2
-offset_mb           rs.l    2
+;offset_agr14        rs.l    2
+;offset_mb           rs.l    2
 num_songs           rs.l    0
 
     even
 song_table:
-    ;       channel table,        section table
-    dc.l    demo_channel_table, demo_section_table
-    dc.l    cza3_channel_table, cza3_section_table
+    ;       channel table,              section table
+    dc.l    silence_channel_table,  silence_section_table
+    dc.l    demo_channel_table,     demo_section_table
+    dc.l    cza3_channel_table,     cza3_section_table
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
+    even
+silence_channel_table:
+    dc.l    silence_fm  ;FM ch1
+    dc.l    silence_fm  ;FM ch2
+    dc.l    silence_fm  ;FM ch3
+    dc.l    silence_fm  ;FM ch4
+    dc.l    silence_fm  ;FM ch5
+    dc.l    silence_fm  ;FM ch6
+    dc.l    silence_psg ;psg ch0
+    dc.l    silence_psg ;psg ch1       
+    dc.l    silence_psg ;psg ch2        
+    dc.l    silence_psg ;noise
+
+silence_section_table:
+    dc.l    mute_fm
+    dc.l    mute_psg
+    dc.l    stop_channel
+
+mute_fm:
+    ;dc.b    sc_keyoff
+    dc.b    sc_reg_write, 0xB4, 0x00
+    dc.b    sc_hold, 0xFE
+    dc.b    sc_end_section
+    
+mute_psg:
+    dc.b    sc_keyoff
+    dc.b    sc_hold, 0xFE
+    dc.b    sc_end_section
+    
+stop_channel:
+    dc.b    sc_stop
+    dc.b    sc_end_section
+    
+silence_fm:
+    dc.b    0, -1, 0
+    
+silence_psg:
+    dc.b    1, -1, 0
+    
+    even
+;================================================
+;   clear audio memory
+;================================================
+clear_audio_memory:
+    moveq   #3, d3             ;num psg channels -1
+    lea     ch_psg_0, a3        ;RAM pointer
+@for_each_psg:
+    move.w  #(psg_ch_size-1), d4    ;size of channel
+@clear_single_psg:
+    clr.b   (a3)+
+    dbf d4, @clear_single_psg
+    dbf d3, @for_each_psg
+    
+    moveq   #5, d3           ;num FM channels -1
+    lea     ch_fm_1, a3
+@for_each_fm:
+    move.w  #(fm_ch_size-1), d4
+@clear_single_fm:
+    clr.b   (a3)+
+    dbf d4, @clear_single_fm
+    dbf d3, @for_each_fm
+
+    rts
     
 ;================================================
 ;   parameter - d0.w    index of song
 ;================================================
 load_song_from_parts_table:
+    move.w  d0, -(sp)   ;push d0
+
+    jsr clear_audio_memory
+    jsr     PSG_Init            ;re-init psg
+    jsr     FM_init             ;re-init fm
+
+    move.w  (sp)+, d0   ;pop d0
+
     lea     song_table, a0  ;a0 = *songtable
     movea.l $4(a0,d0.w), a2 ;a2 = section_table
     movea.l $0(a0,d0.w), a0 ;a0 = channel_table
                             ;[channel_table, section_table]
-    
+                            
+
+                            
     ;load FM channels
 @load_channel_1:
     movea.l (a0)+, a1
@@ -916,7 +991,6 @@ load_song_from_parts_table:
     adda.w  #psg_ch_size, a5
     addi.b  #1, d2
     dbf d1, @for_each_psg_channel
-
     rts
   
 ;============================================================================

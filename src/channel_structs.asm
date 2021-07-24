@@ -99,7 +99,6 @@ psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
                                     ;bit 7 - unused
     even
 psg_ch_size             rs.w    0   ;size of the struct
-;psg_ch_size     equ     0x20
 
 ;==============================================================
 ;   FM Channel Structure

@@ -1,9 +1,14 @@
 #!/usr/bin/python3
 
 import MIDI
+import sys
 
-midi_file = MIDI.MIDIFile("./test_midi.mid")
-#midi_file = MIDI.MIDIFile("./agr14.mid")
+if len(sys.argv) <= 1:
+    print("usage:")
+    print("./convert_midi.py <midi file>")
+    exit()
+    
+midi_file = MIDI.MIDIFile(sys.argv[1])
 
 midi_file.parse()
 
@@ -39,7 +44,7 @@ for track in tracks:
                 ticks_per_sec = 1 / secs_per_tick
                 #print(ticks_per_sec)#print(ticks_per_sec)
                 ticks_per_frame = ticks_per_sec / 60
-                print("Ticks Per Frame: " + str(ticks_per_frame))
+                #print("Ticks Per Frame: " + str(ticks_per_frame))
                 tempo_found = True
                 break
         else:
@@ -62,10 +67,10 @@ for track in tracks:
                     #note ON
                     if prev_event.command == 144:
                         note_name = str("note_" + str(prev_event.message.note)[0:-1]).replace("#","s")
-                        print("M_play_note " + note_name + ", " + str(prev_event.message.note)[-1] + ", " + str(rel_frames))
+                        print("    M_play_note " + note_name + ", " + str(int(str(prev_event.message.note)[-1]) - 1) + ", " + str(rel_frames))
                     #note OFF
                     elif prev_event.command == 128:
-                        print("M_play_rest " + str(rel_frames))
+                        print("    M_play_rest " + str(rel_frames))
         prev_event = event   
                 
             

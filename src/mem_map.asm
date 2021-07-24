@@ -3,8 +3,10 @@
 ;==============================================================
 ; MEMORY MAP
 ;==============================================================
-	RSSET 0x00FF0000			; Map from start of RAM
-ram_frame_counter       rs.l 1  ;
+	RSSET 0x00FF2000			; Map from start of RAM
+frame_counter       rs.l    1   ;
+song_menu_index     rs.b    1   ;0-number of songs
+
 
 ; ram_psg0_frequency		rs.w 1	; Current PSG frequency (2 bytes)
 ; ram_psg1_frequency		rs.w 1	; Current PSG frequency (2 bytes)

@@ -2,7 +2,7 @@
 ;================================================
 ;   Memory Map
 ;================================================
-    RSSET   0xFF0004
+    RSSET   0xFF0000
 
 p1_buttons_held         rs.b    1
 p1_buttons_pressed      rs.b    1
@@ -205,6 +205,7 @@ DEBUG_controller_output_loop:
     
 @write_nothing:
     move.w  #tile_id_blank, vdp_data    ;write blank to vdp
+    ;M_Write_Tile 0, 0, 0, 0, tile_id_blank
     
 @loop_continue:
     lsr.b   #1, d0                  ;shift to next bit

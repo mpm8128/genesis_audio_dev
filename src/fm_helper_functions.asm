@@ -5,26 +5,38 @@ fm_frequency_table:
 ;    dc.w    617, 653, 692, 733, 777, 823, 872, 924, 979, 1037, 1099, 1164
     dc.w    644, 682, 723, 766, 811, 859, 910, 965, 1022, 1083, 1147, 1215
 
+    even
 ;============================================================================
 ;   FM_init
     ;initializes the 2612 by writing a keyoff for every channel
 ;============================================================================
 
 FM_init:
-    rts
-    ;;
+    movea.l 0, a5
+    
     move.b  #0, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
     move.b  #1, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
+
     move.b  #2, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
+
     move.b  #4, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
+
     move.b  #5, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
+
     move.b  #6, d2
     jsr keyoff_FM_channel
+    jsr quick_mute_FM_channel
+
     rts
   
 ;============================================================================
@@ -43,6 +55,26 @@ quick_mute_FM_channel:
 @skip_mod_data:
     move.b  #0xB4, d0               ;stereo/am/fm mod register
     andi.b  #0x3F, d1               ;mask off stereo bits
+    jsr write_register_opn2
+    rts
+    
+    
+;============================================================================
+;   quick_unmute_FM_channel
+;       disables both stereo outputs
+;parameters:
+;   a5 - pointer to struct (optional)
+;   d2.b - channel (0-2, 4-6)
+;============================================================================
+quick_unmute_FM_channel:
+    move.l  a5, d6                  ;copy a5 to d6
+    tst.l   d6                      ;null check
+    beq     @skip_mod_data          ;if null, don't do this
+    move.b  fm_ch_lr_amfm(a5), d1   ;load mod data from struct
+    
+@skip_mod_data:
+    move.b  #0xB4, d0               ;stereo/am/fm mod register
+    ;ori.b   #0xC0, d1               ;turn on both stereo bits
     jsr write_register_opn2
     rts
     
