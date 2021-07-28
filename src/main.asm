@@ -19,7 +19,11 @@ flag_DEBUG equ 0
 SetVRAMWrite: macro addr
 	move.l  #(vdp_cmd_vram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
 	endm
-	
+
+SetVRAMDMA: macro addr
+	move.l  #(vdp_cmd_vram_dma)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
+	endm
+
 ; Set the CRAM (colour RAM) address to write to next
 SetCRAMWrite: macro addr
 	move.l  #(vdp_cmd_cram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
@@ -83,16 +87,6 @@ init_z80:
 ;   Demo initialization
 ;==============================================================
 demo_init:
-    ;move.w  #offset_demo, d0
-    ;jsr load_song_from_parts_table
-    ;jsr demo_tiles_init
-    rts
-    
-;==============================================================
-;   demo_tiles_init
-;   demonstrates basic tile display
-;==============================================================
-demo_tiles_init:
     lea test_palette, a0        ;
     jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
     
@@ -100,26 +94,43 @@ demo_tiles_init:
 	lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
     jsr Copy_Tiles_to_VRAM
     
-    ; Write tile positions to plane A VRAM
-	SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
-	move.w #tile_id_blank, vdp_data		; 
-    ; move.w #tile_id_a, vdp_data		
-    ; move.w #tile_id_g, vdp_data		
-    ; move.w #tile_id_r, vdp_data		
-    ; move.w #tile_id_blank, vdp_data		
-    ; move.w #tile_id_1, vdp_data
-    ; move.w #tile_id_4, vdp_data
-    move.w #tile_id_a, vdp_data		; 
-    move.w #tile_id_blank, vdp_data		; 
-    move.w #tile_id_m, vdp_data		; 
-    move.w #tile_id_y, vdp_data		; 
-    move.w #tile_id_s, vdp_data		; 
-    move.w #tile_id_t, vdp_data		; 
-    move.w #tile_id_e, vdp_data		; 
-    move.w #tile_id_r, vdp_data		; 
-    move.w #tile_id_y, vdp_data		; 
-
+    ;init sound test
+    move.b  #1, st_flag_display_changed
+    
     rts
+    
+; ;==============================================================
+; ;   demo_tiles_init
+; ;   demonstrates basic tile display
+; ;==============================================================
+; demo_tiles_init:
+    ; lea test_palette, a0        ;
+    ; jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
+    
+	; ; Write the font glyph tiles to VRAM
+	; lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
+    ; jsr Copy_Tiles_to_VRAM
+    
+    ; ; Write tile positions to plane A VRAM
+	; SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
+	; move.w #tile_id_blank, vdp_data		; 
+    ; ; move.w #tile_id_a, vdp_data		
+    ; ; move.w #tile_id_g, vdp_data		
+    ; ; move.w #tile_id_r, vdp_data		
+    ; ; move.w #tile_id_blank, vdp_data		
+    ; ; move.w #tile_id_1, vdp_data
+    ; ; move.w #tile_id_4, vdp_data
+    ; move.w #tile_id_a, vdp_data		; 
+    ; move.w #tile_id_blank, vdp_data		; 
+    ; move.w #tile_id_m, vdp_data		; 
+    ; move.w #tile_id_y, vdp_data		; 
+    ; move.w #tile_id_s, vdp_data		; 
+    ; move.w #tile_id_t, vdp_data		; 
+    ; move.w #tile_id_e, vdp_data		; 
+    ; move.w #tile_id_r, vdp_data		; 
+    ; move.w #tile_id_y, vdp_data		; 
+
+    ; rts
     
 
     
@@ -128,6 +139,7 @@ demo_tiles_init:
 ;==============================================================
 
 ; Vertical interrupt - run once per frame (50hz in PAL, 60hz in NTSC)
+    even
 INT_VInterrupt:
     M_disable_interrupts
     
@@ -142,7 +154,7 @@ INT_VInterrupt:
     
     jsr audio_driver
     
-    
+    ;jsr DMA_plane_A
     
     M_enable_interrupts
     rte
@@ -238,5 +250,6 @@ VDP_LoadRegisters:
     include 'audio_driver.asm'
     include 'controller_driver.asm'
     include 'sound_test.asm'
+    include 'tile_printing.asm'
 ; A label defining the end of ROM so we can compute the total size.
 ROM_End:

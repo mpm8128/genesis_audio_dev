@@ -38,6 +38,8 @@ pad2_ctrl   equ $A1000B
 ; pad3_s_rx   equ $A1001D
 ; pad3_s_ct   equ $A1001F
 
+
+    even
 ;================================================
 ;   Get Controller Inputs
 ;       - reads from both controllers

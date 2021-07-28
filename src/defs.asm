@@ -44,6 +44,7 @@ vdp_control				equ 0x00C00004
 vdp_data				equ 0x00C00000
 
 ; VDP commands
+vdp_cmd_vram_dma        equ 0x40000080
 vdp_cmd_vram_write		equ 0x40000000
 vdp_cmd_cram_write		equ 0xC0000000
 vdp_cmd_vsram_write		equ 0x40000010
@@ -100,11 +101,10 @@ pad_button_up			equ 0x0
 pad_button_down			equ 0x1
 pad_button_left			equ 0x2
 pad_button_right		equ 0x3
-pad_button_a			equ 0xC
+pad_button_a			equ 0x6
 pad_button_b			equ 0x4
 pad_button_c			equ 0x5
-pad_button_start		equ 0xD
-pad_button_all			equ 0x303F
+pad_button_start		equ 0x7
 
 ; The size of a word and longword
 size_word				equ 2
@@ -120,14 +120,6 @@ size_tile_b				equ 0x20
 size_tile_w				equ size_tile_b/size_word
 size_tile_l				equ size_tile_b/size_long
 
-; Hello World draw position (in tiles)
-text_pos_x				equ 0x08
-text_pos_y				equ 0x04
-
-; Initial PSG values
-initial_psg_vol			equ 0x08 ; (half volume)
-initial_psg_freq		equ 0xFE ; (440hz)
-
 test_palette:
 	dc.w 0x0000	; Colour 0 = Transparent
 	dc.w 0x0EEE	; Colour 1 = White
@@ -136,7 +128,7 @@ test_palette:
 	dc.w 0x00E0	; Colour 4 = Blue
 	dc.w 0x0E00	; Colour 5 = Green
 	dc.w 0x0E0E	; Colour 6 = Pink
-	dc.w 0x0000	; Leave the rest black...
+	dc.w 0x0000
 	dc.w 0x0E00
 	dc.w 0x00E0
 	dc.w 0x000E

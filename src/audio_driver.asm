@@ -798,20 +798,26 @@ note_B      rs.b    1
     include 'channel_structs.asm'
   
 ;================================================
+song_record_size        equ     2
+song_record_size_bytes  equ     (song_record_size*4)
+
     RSRESET
-offset_silence      rs.l    2
-offset_demo         rs.l    2
-offset_cza3         rs.l    2
+offset_silence      rs.l    song_record_size
+offset_cza13        rs.l    song_record_size
+offset_demo         rs.l    song_record_size
+offset_cza3         rs.l    song_record_size
 ;offset_agr14        rs.l    2
 ;offset_mb           rs.l    2
 num_songs           rs.l    0
 
     even
 song_table:
-    ;       channel table,              section table
-    dc.l    silence_channel_table,  silence_section_table
-    dc.l    demo_channel_table,     demo_section_table
-    dc.l    cza3_channel_table,     cza3_section_table
+    ;       channel table,              section table       ;,      ptr to name
+    dc.l    silence_channel_table,  silence_section_table   ;,  silence_name
+    dc.l    demo_channel_table,     demo_section_table      ;,     0
+    dc.l    cza13_channel_table,    cza13_section_table     ;,    0
+    dc.l    cza3_channel_table,     cza3_section_table      ;,     0
+    
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
@@ -834,7 +840,7 @@ silence_section_table:
     dc.l    stop_channel
 
 mute_fm:
-    ;dc.b    sc_keyoff
+    dc.b    sc_keyoff
     dc.b    sc_reg_write, 0xB4, 0x00
     dc.b    sc_hold, 0xFE
     dc.b    sc_end_section
@@ -1068,10 +1074,17 @@ M_play_rest: macro duration
     endc
     endm
     
+M_load_inst: macro inst_name
+    dc.b    sc_load_inst
+    even
+    dc.l    \inst_name
+    endm
+    
     include 'instrument_defs.asm'
     
     include 'songs/demo_section_table.asm'
     ;include 'songs/a_mystery.asm'
-    include 'songs/agr_14.asm'
+    ;include 'songs/agr_14.asm'
     include 'songs/cza_3.asm'
+    include 'songs/cza13.asm'
     ;include 'songs/mission_briefing.asm'
