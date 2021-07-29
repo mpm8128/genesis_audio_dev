@@ -5,9 +5,13 @@ import sys
 
 if len(sys.argv) <= 1:
     print("usage:")
-    print("./convert_midi.py <midi file>")
+    print("./convert_midi.py <midi file> [transpose octave]")
     exit()
     
+transpose = 0
+if len(sys.argv) == 3:
+    transpose = sys.argv[2]
+
 midi_file = MIDI.MIDIFile(sys.argv[1])
 midi_file.parse()
 
@@ -57,10 +61,12 @@ for track in tracks:
                     #note ON
                     if prev_event.command == 144:
                         note_name = str("note_" + str(prev_event.message.note)[0:-1]).replace("#","s")
-                        print("    M_play_note " + note_name + ", " + str(int(str(prev_event.message.note)[-1]) - 0) + ", " + str(rel_frames))
+                        print("    M_play_note " + note_name + ", " + str(int(str(prev_event.message.note)[-1]) + int(transpose)) + ", " + str(rel_frames))
                     #note OFF
                     elif prev_event.command == 128:
                         print("    M_play_rest " + str(rel_frames))
-        prev_event = event   
 
+            prev_event = event
+
+            #print(error)  
 exit()

@@ -1,8 +1,7 @@
 ;cza13.asm
-
     module
-
     even
+    
 ;==============
 ;channel table
 cza13_channel_table:

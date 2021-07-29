@@ -4,7 +4,7 @@
 st_offset   rs.w    1
 st_flag_display_changed     rs.b    1
 
-module
+    module
 
     even
 sound_test_menu:    
@@ -125,4 +125,4 @@ st_digits   rs.w    num_st_digits
     clr.b   st_flag_display_changed
     rts
     
-endmodule
+    modend

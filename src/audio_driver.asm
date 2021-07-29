@@ -58,7 +58,9 @@ handle_all_fm_channels:
     tst.b   fm_ch_is_enabled(a5)    ;if channel is disabled
     beq     @next_channel           ;   skip it
                                     ;else
-    jsr handle_fm_channel           ;   handle it
+    jsr handle_fm_stream            ;   handle stream data
+    ;jsr envelopes                  ;   handle any active envelopes
+    ;jsr write pitch/volume         ;   write to chip
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
@@ -66,11 +68,11 @@ handle_all_fm_channels:
     rts
     
 ;============================================================================
-;   handle_fm_channel
+;   handle_fm_stream
 ;parameter: pointer to psg channel struct in a5
 ;unusable: d7   
 ;============================================================================
-handle_fm_channel:
+handle_fm_stream:
     move.b  fm_ch_wait_time(a5), d6    ;check note duration
     beq     @done_waiting               ;if duration == 0, read new code from stream
                                         ;else
@@ -104,7 +106,11 @@ fm_stream_jumptable:
     dc.l    stream_fm_reg_write
     dc.l    stream_fm_hold
     dc.l    stream_fm_end_section
-
+    dc.l    stream_fm_pitchbend
+    
+;TODO
+stream_fm_pitchbend:
+    bra read_fm_stream
 ;==============================================================
 ;==============================================================
 fm_load_first_section:
@@ -323,12 +329,56 @@ handle_all_psg_channels:
                                     ;else
     jsr handle_psg_stream           ;   read stream events
     jsr handle_psg_adsr             ;   adjust with envelope
+    jsr handle_psg_pitchbend        ;   handle pitchbend
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
     adda.w  #psg_ch_size, a5        ;next channel
     dbf d7, @loop_psg_ch            ;loop end
     
     rts
+    
+    
+;============================================================================
+;   handle_psg_pitchbend
+;============================================================================
+handle_psg_pitchbend:
+    tst.b   psg_ch_pitchbend_rate(a5)
+    beq     @return
+
+    move.b  psg_ch_inst_flags(a5), d0
+    move.w  psg_ch_adj_freq(a5), d1    
+    move.b  psg_ch_pitchbend_counter(a5), d3
+
+;@check pitchbend
+    tst.b   d3
+    ble     @apply_pitchbend
+    ;else
+    subq    #1, d3
+    bra     @writeback_to_struct
+
+@apply_pitchbend:
+    bset    #4, d0                              ;"update pitch" flag
+    move.b  psg_ch_pitchbend_scaling(a5), d3    ;reload counter
+    move.b  psg_ch_pitchbend_rate(a5), d2       ;d2 = rate
+    ext.w   d2                                  ;sign-extend rate
+    add.w   d2, d1                              ;d0 = freq + adjustment
+;@check max freq
+    cmp.w   #max_psg_freq, d1       ;
+    blt     @check_min_freq         ;
+    move.w  #max_psg_freq, d1       ;clip
+    bra     @writeback_to_struct    ;
+@check_min_freq:
+    cmp.w   #min_psg_freq, d1       ;
+    bgt     @writeback_to_struct
+    move.w  #min_psg_freq, d1
+
+@writeback_to_struct:
+    move.b  d0, psg_ch_inst_flags(a5)
+    move.w  d1, psg_ch_adj_freq(a5)
+    move.b  d3, psg_ch_pitchbend_counter(a5)
+    
+@return:
+    rts    
     
 ;============================================================================
 ;   handle_psg_stream
@@ -369,7 +419,27 @@ psg_stream_jumptable:
     dc.l    stream_psg_reg_write
     dc.l    stream_psg_hold
     dc.l    stream_psg_end_section
+    dc.l    stream_psg_pitchbend
     
+;==============================================================
+;   stream_psg_pitchbend  
+;   code: sc_pitchbend
+;
+;   sets pitchbend rate/scale
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b   rate (signed amount to bend)
+;       b   scale (number of frames to wait)
+;==============================================================
+stream_psg_pitchbend:
+    move.b  (a4)+, psg_ch_pitchbend_rate(a5)
+    move.b  (a4)+, d0   ;scaling
+    move.b  d0, psg_ch_pitchbend_scaling(a5)
+    move.b  d0, psg_ch_pitchbend_counter(a5)
+    bra read_psg_stream
+
 ;==============================================================
 ;==============================================================
 psg_load_first_section:
@@ -442,6 +512,8 @@ stream_psg_end_section:
 ;============================================================================
 ;TODO
 stream_psg_reg_write:
+    move.b  (a4)+, d0       ;register
+    move.b  (a4)+, d1       ;value
     bra read_psg_stream     ;read more from stream
 
 ;============================================================================
@@ -639,7 +711,7 @@ handle_psg_adsr:
     move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
 ;@check_keyon:
     btst    #6, d0          ;check for keyon event
-    beq     @no_keyon           
+    beq     @no_keyon
                             ;else handle keyon
     andi.b  #0x90, d0       ;clear everything but the "enable" bit
     move.b  psg_ch_attack_scaling(a5), psg_ch_adsr_counter(a5)
@@ -771,6 +843,7 @@ sc_load_inst    rs.b        1
 sc_reg_write    rs.b        1
 sc_hold         rs.b        1
 sc_end_section  rs.b        1
+sc_pitchbend    rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
@@ -799,13 +872,14 @@ note_B      rs.b    1
   
 ;================================================
 song_record_size        equ     2
-song_record_size_bytes  equ     (song_record_size*4)
+song_record_size_bytes  equ     (song_record_size*size_long)
 
     RSRESET
 offset_silence      rs.l    song_record_size
 offset_cza13        rs.l    song_record_size
 offset_demo         rs.l    song_record_size
 offset_cza3         rs.l    song_record_size
+offset_aro2         rs.l    song_record_size
 ;offset_agr14        rs.l    2
 ;offset_mb           rs.l    2
 num_songs           rs.l    0
@@ -817,7 +891,7 @@ song_table:
     dc.l    demo_channel_table,     demo_section_table      ;,     0
     dc.l    cza13_channel_table,    cza13_section_table     ;,    0
     dc.l    cza3_channel_table,     cza3_section_table      ;,     0
-    
+    dc.l    aro2_channel_table,     aro2_section_table
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
@@ -1087,4 +1161,5 @@ M_load_inst: macro inst_name
     ;include 'songs/agr_14.asm'
     include 'songs/cza_3.asm'
     include 'songs/cza13.asm'
+    include 'songs/aro2.asm'
     ;include 'songs/mission_briefing.asm'

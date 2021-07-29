@@ -72,6 +72,11 @@ psg_ch_adj_freq         rs.w    1   ;10-bit frequency register value.
 
 
 ; ;PSG channel automation information
+psg_ch_pitchbend_rate       rs.b    1   ;signed amount to bend up/down
+psg_ch_pitchbend_scaling    rs.b    1   ;number of frames until next 
+                                        ;   pitch adjustment
+psg_ch_pitchbend_counter    rs.b    1   ;counter for scaling
+
 ; psg_ch_freq_auto_idx    rs.w    1   ;index into pitchbend envelope
 ; psg_ch_freq_auto_ptr    rs.l    1   ;pointer to the envelope
 
