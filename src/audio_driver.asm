@@ -72,8 +72,9 @@ handle_all_fm_channels:
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_stream               ;   handle stream events
+    jsr handle_pitchbend        ;   handle pitchbend
     ;jsr envelopes                  ;   handle any active envelopes
-    ;jsr write pitch/volume         ;   write to chip
+    jsr fm_driver_write_to_chip
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
@@ -94,7 +95,7 @@ handle_all_psg_channels:
                                     ;else
     jsr handle_stream               ;   read stream events
     jsr handle_psg_adsr             ;   adjust with envelope
-    jsr handle_psg_pitchbend        ;   handle pitchbend
+    jsr handle_pitchbend        ;   handle pitchbend
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
     adda.w  #ch_size, a5            ;next channel
@@ -377,49 +378,44 @@ stream_loop:
 ;       b   note_octave
 ;==============================================================
 stream_keyon:
+    move.b  (a4)+,  d6              ;d6 = note name
+    ext.w   d6                      ;sign-extend to word-length
+    move.b  d6, ch_note_name(a5)    ;write to struct also
+
+    move.b  (a4)+,  d0              ;d0 = note octave
+    ext.w   d0                      ;sign-extend to word-length
+    move.b  d0, ch_note_octave(a5)  ;write to struct also
+
     M_split_by_channel_type stream_psg_keyon, &
                             stream_fm_keyon, &
                             read_stream, &
                             read_stream
-;--------------------------------------------------------------
-;   stream_psg_keyon
-;   code: sc_keyon
-;--------------------------------------------------------------
-stream_psg_keyon:
-    move.b  (a4)+,  d6              ;d6 = note name
-    ext.w   d6                      ;sign-extend to word-length
-    move.b  (a4)+,  d5              ;d5 = note octave
-    ext.w   d5                      ;sign-extend to word-length
-    
-    jsr get_psg_freq_from_note_name_and_octave  ;d1 = timer_value
-    
+                            
+stream_keyon_cleanup:
     ;save to struct
     move.w  d1, ch_base_freq(a5)
     move.w  d1, ch_adj_freq(a5)
     bset    #6, ch_inst_flags(a5)   ;set "keyon" flag
     bset    #4, ch_inst_flags(a5)   ;set "pitch update" flag
-    jmp read_stream                 ;cleanup and return
+    jmp read_stream
+;--------------------------------------------------------------
+;   stream_psg_keyon
+;   code: sc_keyon
+;--------------------------------------------------------------
+stream_psg_keyon:
+    move.w  d0, d5  ;restore note octave to d5
+    jsr get_psg_freq_from_note_name_and_octave  ;d1 = timer_value
+    bra stream_keyon_cleanup
     
 ;--------------------------------------------------------------
 ;   stream_fm_keyon
 ;   code: sc_keyon
 ;--------------------------------------------------------------
 stream_fm_keyon:
-    move.b  (a4)+,  d6                      ;d6 = note name
-    move.b  d6, fm_ch_note_name(a5)         ;write to struct also
-    ext.w   d6                              ;sign-extend to word-length
-    move.b  (a4)+,  d0                      ;d5 = note octave
-    move.b  d0, fm_ch_note_octave(a5)       ;write to struct also
     lea     fm_frequency_table, a0
     lsl.w   #1, d6                          ;word-align
     move.w  (a0, d6.w), d1                  ;d1.w = frequency number
-    move.b  ch_channel_num(a5), d2          ;d2 = channel number
-    
-    jsr     set_FM_frequency                ;write frequency to 2612
-    move.b  ch_channel_num(a5), d2          ;d2 = channel number
-    jsr     keyon_FM_channel                ;write keyon for fm channel
-
-    jmp read_stream                         ;cleanup and return
+    bra stream_keyon_cleanup
     
 ;==============================================================
 ;   stream_keyoff
@@ -432,6 +428,9 @@ stream_fm_keyon:
 ;   a4 - stream pointer
 ;==============================================================
 stream_keyoff:
+    bset  #5, ch_inst_flags(a5)     ;set keyoff flag
+    jmp read_stream
+
     M_split_by_channel_type stream_psg_keyoff, &
                             stream_fm_keyoff, &
                             read_stream, &
@@ -473,7 +472,12 @@ stream_fm_keyoff:
 ;==============================================================
 stream_pitchbend:
     move.b  (a4)+, d0   ;rate
+    M_split_by_channel_type @invert, @no_invert, @no_invert, @no_invert
+    
+@invert:
     neg.b   d0          ;switch sign because psg chip is backwards
+    
+@no_invert:
     move.b  d0, ch_pitchbend_rate(a5)
     
     move.b  (a4)+, d0   ;scaling
@@ -482,9 +486,9 @@ stream_pitchbend:
     bra read_stream
     
 ;============================================================================
-;   handle_psg_pitchbend
+;   handle_pitchbend
 ;============================================================================
-handle_psg_pitchbend:
+handle_pitchbend:
     tst.b   ch_pitchbend_rate(a5)
     beq     @return
 
@@ -505,15 +509,35 @@ handle_psg_pitchbend:
     move.b  ch_pitchbend_rate(a5), d2       ;d2 = rate
     ext.w   d2                                  ;sign-extend rate
     add.w   d2, d1                              ;d1 = freq + adjustment
+    
+    M_split_by_channel_type @clip_psg_freq, &
+                            @clip_fm_freq, &
+                            @writeback_to_struct, &
+                            @writeback_to_struct
+
+@clip_psg_freq
 ;@check max freq
     cmp.w   #max_psg_freq, d1       ;
-    blt     @check_min_freq         ;
+    blt     @psg_check_min_freq         ;
     move.w  #max_psg_freq, d1       ;clip
     bra     @writeback_to_struct    ;
-@check_min_freq:
+@psg_check_min_freq:
     cmp.w   #min_psg_freq, d1       ;
     bgt     @writeback_to_struct    ;
     move.w  #min_psg_freq, d1       ;clip
+    bra     @writeback_to_struct    ;
+
+@clip_fm_freq
+;@check max freq
+    cmp.w   #max_fm_freq, d1        ;
+    blt     @fm_check_min_freq         ;
+    move.w  #max_fm_freq, d1        ;clip
+    bra     @writeback_to_struct    ;
+@fm_check_min_freq:
+    cmp.w   #min_fm_freq, d1        ;
+    bgt     @writeback_to_struct    ;
+    move.w  #min_fm_freq, d1        ;clip
+    ;bra     @writeback_to_struct    ;
 
 @writeback_to_struct:
     move.b  d0, ch_inst_flags(a5)
@@ -714,20 +738,58 @@ handle_psg_adsr:
 ;   psg write to chip
 ;==============================================================
 psg_driver_write_to_chip:
-    move.b  ch_channel_num(a5), d0      ;d0 = channel
+    move.b  ch_channel_num(a5), d0  ;d0 = channel
     move.b  ch_current_vol(a5), d1  ;d1 = vol
-    jsr PSG_SetVolume       ;(channel (d0.b), vol (d1.b))
+    jsr PSG_SetVolume               ;(channel (d0.b), vol (d1.b))
     
     move.b  ch_inst_flags(a5), d5
-    btst    #4, d5  ;check pitch update flag
+    btst    #4, d5                  ;check pitch update flag
     beq     @return
-    bclr    #4, d5  ;clear pitch update flag
-    move.b  ch_channel_num(a5), d0      ;d0 = channel
-    move.w  ch_adj_freq(a5), d1      ;d0 = channel
-    jsr PSG_SetFrequency    ;(channel (d0.b), counter (d1.w))
+    bclr    #4, d5                  ;clear pitch update flag
+    move.b  ch_channel_num(a5), d0  ;d0 = channel
+    move.w  ch_adj_freq(a5), d1     ;d0 = channel
+    jsr PSG_SetFrequency            ;(channel (d0.b), counter (d1.w))
     move.b  d5, ch_inst_flags(a5)
 @return
     rts
+    
+;==============================================================
+;   fm write to chip
+;==============================================================
+fm_driver_write_to_chip:
+    ;move.b  ch_channel_num(a5), d0  ;d0 = channel
+    ;move.b  ch_current_vol(a5), d1  ;d1 = vol
+    ;jsr PSG_SetVolume               ;(channel (d0.b), vol (d1.b))
+    
+    move.b  ch_inst_flags(a5), d5
+@check_keyoff:
+    btst    #5, d5  ;check keyoff
+    beq     @check_pitch_update
+    bclr    #5, d5  ;clear keyoff
+    move.b  ch_channel_num(a5), d2
+    jsr keyoff_FM_channel
+
+@check_pitch_update:
+    btst    #4, d5                  ;check pitch update flag
+    beq     @check_keyon
+    bclr    #4, d5                  ;clear pitch update flag
+
+    move.b  ch_channel_num(a5), d2  ;d2 = channel
+    move.w  ch_adj_freq(a5), d1     ;d1 = adjusted frequency
+    move.b  ch_note_octave(a5), d0  ;d0 = octave (block)
+    jsr set_FM_frequency            ;(channel (d0.b), counter (d1.w))
+    
+@check_keyon:
+    btst    #6, d5          ;check keyon
+    beq     @cleanup_and_return
+    bclr    #6, d5          ;clear keyon
+    move.b  ch_channel_num(a5), d2
+    jsr     keyon_FM_channel
+
+@cleanup_and_return
+    move.b  d5, ch_inst_flags(a5)
+    rts
+    
 ;==============================================================
 ;   stream codes
 ;==============================================================
@@ -864,7 +926,7 @@ clear_audio_memory:
 load_song_from_parts_table:
     move.w  d0, -(sp)   ;push d0
 
-    jsr clear_audio_memory
+    jsr     clear_audio_memory
     jsr     PSG_Init            ;re-init psg
     jsr     FM_init             ;re-init fm
 
@@ -881,7 +943,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_channel_2
-    lea ch_fm_1, a5     ;channel 
+    lea     ch_fm_1, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #0, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -893,7 +955,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_channel_3
-    lea ch_fm_2, a5     ;channel 
+    lea     ch_fm_2, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #1, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -905,7 +967,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_channel_4
-    lea ch_fm_3, a5     ;channel 
+    lea     ch_fm_3, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #2, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -917,7 +979,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_channel_5
-    lea ch_fm_4, a5     ;channel 
+    lea     ch_fm_4, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #4, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -929,7 +991,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_channel_6
-    lea ch_fm_5, a5     ;channel 
+    lea     ch_fm_5, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #5, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -941,7 +1003,7 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @load_psg_channels
-    lea ch_fm_6, a5     ;channel 
+    lea     ch_fm_6, a5     ;channel 
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
     move.b  #6, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
@@ -953,7 +1015,7 @@ load_song_from_parts_table:
 
     moveq   #3, d1  ;loop counter
     move.b  #0, d2  ;channel number
-    lea ch_psg_0, a5
+    lea     ch_psg_0, a5
 @for_each_psg_channel
     movea.l (a0)+, a1
     move.l  a1, d0

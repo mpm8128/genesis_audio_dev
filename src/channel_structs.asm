@@ -38,7 +38,7 @@ ch_sequence_ptr         rs.l    1   ;pointer to sequence table
 ch_inst_ptr             rs.l    1   ;pointer to instrument data on ROM
 
 ch_inst_flags           rs.b    1   
-    ;EKOP xSaa
+    ;xKOP xSaa
     ;bits 0-1: "aa" - envelope bits
     ;   00 = attack
     ;   01 = decay
@@ -56,12 +56,13 @@ ch_inst_flags           rs.b    1
     ;   got a keyon event from the stream. This
     ;   will get cleared when we actually write
     ;   the keyoff to the chip
-    ;bit 7 - "E" - channel enable bit. Will not process
+    ;bit 7 -  should be unused
+    ;   previously "E" - channel enable bit. Will not process
     ;   stream events while set to zero
 
 ;fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
-fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)
-fm_ch_note_octave       rs.b    1   ;current octave (pre-vibr/envelope)
+ch_note_name            rs.b    1   ;current note (pre-vibr/envelope)
+ch_note_octave          rs.b    1   ;current octave (pre-vibr/envelope)
 ;fm_ch_algorithm         rs.b    1   ;algorithm (0-7)
 fm_ch_lr_amfm           rs.b    1   ;LRAA xFFF
 
