@@ -55,14 +55,14 @@ handle_all_fm_channels:
     
     ;for each channel
 @loop_fm_ch:
-    tst.b   fm_ch_is_enabled(a5)    ;if channel is disabled
+    tst.b   ch_channel_flags(a5)    ;if channel is disabled
     beq     @next_channel           ;   skip it
                                     ;else
     jsr handle_fm_stream            ;   handle stream data
     ;jsr envelopes                  ;   handle any active envelopes
     ;jsr write pitch/volume         ;   write to chip
 @next_channel:
-    adda.w  #fm_ch_size, a5         ;next channel
+    adda.w  #ch_size, a5            ;next channel
     dbf d7, @loop_fm_ch             ;loop end
 
     rts
@@ -73,15 +73,15 @@ handle_all_fm_channels:
 ;unusable: d7   
 ;============================================================================
 handle_fm_stream:
-    move.b  fm_ch_wait_time(a5), d6    ;check note duration
+    move.b  ch_wait_time(a5), d6    ;check note duration
     beq     @done_waiting               ;if duration == 0, read new code from stream
                                         ;else
-    subi.b  #1, fm_ch_wait_time(a5)    ;decrement note duration counter
+    subi.b  #1, ch_wait_time(a5)    ;decrement note duration counter
     beq     @done_waiting               ;   and check again so we don't wait too long
     rts                                 ;else return
     
 @done_waiting:
-    move.l  fm_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
+    move.l  ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
     beq     fm_load_first_section
 
@@ -115,8 +115,8 @@ stream_fm_pitchbend:
 ;==============================================================
 fm_load_first_section:
     ;load table pointers
-    movea.l     fm_ch_section_ptr(a5), a3  ;a3 = section ptr
-    movea.l     fm_ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
+    movea.l     ch_section_ptr(a5), a3  ;a3 = section ptr
+    movea.l     ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
 
     ;get section index from sequence_table[0]
     clr.w   d1              ;
@@ -128,8 +128,8 @@ fm_load_first_section:
     
     ;write back to struct
     moveq   #0, d0
-    move.w  d0, fm_ch_sequence_idx(a5) 
-    move.l  a4, fm_ch_stream_ptr(a5)
+    move.w  d0, ch_sequence_idx(a5) 
+    move.l  a4, ch_stream_ptr(a5)
     bra read_fm_stream
 
 ;==============================================================
@@ -137,12 +137,12 @@ fm_load_first_section:
 ;==============================================================
 stream_fm_end_section:
     ;load table pointers
-    movea.l     fm_ch_section_ptr(a5), a3  ;a3 = section ptr
-    movea.l     fm_ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
+    movea.l     ch_section_ptr(a5), a3  ;a3 = section ptr
+    movea.l     ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
 
     ;increment sequence index
     clr.w   d0                          ;
-    move.w  fm_ch_sequence_idx(a5), d0  ;d0.w = old index
+    move.w  ch_sequence_idx(a5), d0  ;d0.w = old index
     addi.w  #1, d0                      ;increment index
     
     ;get section index from sequence table
@@ -167,8 +167,8 @@ stream_fm_end_section:
     movea.l (a3, d1.w), a4  ;a4 = next stream pointer 
     
     ;write back to struct
-    move.w  d0, fm_ch_sequence_idx(a5) 
-    move.l  a4, fm_ch_stream_ptr(a5)
+    move.w  d0, ch_sequence_idx(a5) 
+    move.l  a4, ch_stream_ptr(a5)
     
     bra read_fm_stream
 
@@ -184,11 +184,11 @@ stream_fm_end_section:
 ;       b   time to wait
 ;==============================================================
 stream_fm_hold:
-    move.b  (a4)+, fm_ch_wait_time(a5)      ;set note duration
+    move.b  (a4)+, ch_wait_time(a5)      ;set note duration
     jmp exit_fm_stream                     ;cleanup and return
 
 exit_fm_stream:
-    move.l   a4, fm_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
+    move.l   a4, ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
 
 ;==============================================================\
@@ -238,9 +238,9 @@ stream_fm_load_instrument:
 ;   a5 - channel struct pointer
 ;==============================================================
 stream_fm_stop:
-    clr.b   fm_ch_is_enabled(a5)   ;mark channel as "disabled"
-    clr.l   fm_ch_stream_ptr(a5)   ;wipe stream pointer
-    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    clr.b   ch_channel_flags(a5)    ;mark channel as "disabled"
+    clr.l   ch_stream_ptr(a5)       ;wipe stream pointer
+    move.b  ch_channel_num(a5), d2  ;d2 = channel number
     jsr     quick_mute_FM_channel   ;disable both stereo channels
     jsr     keyoff_FM_channel       ;write keyoff
     rts
@@ -263,8 +263,8 @@ stream_fm_loop:
     tst.b   (a4)+           ;align that bad boy
 @word_aligned:
     ;move new stream location to channel struct
-    move.l  (a4), fm_ch_stream_ptr(a5)
-    move.l  fm_ch_stream_ptr(a5), a4
+    move.l  (a4), ch_stream_ptr(a5)
+    move.l  ch_stream_ptr(a5), a4
 
     bra read_fm_stream     ;read more from stream
 
@@ -284,17 +284,17 @@ stream_fm_loop:
 ;==============================================================
 stream_fm_keyon:
     move.b  (a4)+,  d6                      ;d6 = note name
-    move.b  d6, fm_ch_note_name(a5)         ;write to struct also
+    move.b  d6, fm_ch_note_name(a5)            ;write to struct also
     ext.w   d6                              ;sign-extend to word-length
     move.b  (a4)+,  d0                      ;d5 = note octave
-    move.b  d0, fm_ch_note_octave(a5)       ;write to struct also
+    move.b  d0, fm_ch_note_octave(a5)          ;write to struct also
     lea     fm_frequency_table, a0
     lsl.w   #1, d6                          ;word-align
     move.w  (a0, d6.w), d1                  ;d1.w = frequency number
-    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
+    move.b  ch_channel_num(a5), d2          ;d2 = channel number
     
     jsr     set_FM_frequency                ;write frequency to 2612
-    move.b  fm_ch_channel(a5), d2           ;d2 = channel number
+    move.b  ch_channel_num(a5), d2          ;d2 = channel number
     jsr     keyon_FM_channel                ;write keyon for fm channel
 
     jmp read_fm_stream                         ;cleanup and return
@@ -311,7 +311,7 @@ stream_fm_keyon:
 ;       b   note_duration
 ;==============================================================
 stream_fm_keyoff:
-    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    move.b  ch_channel_num(a5), d2  ;d2 = channel number
     jsr     keyoff_FM_channel       ;write keyoff to 2612
     jmp read_fm_stream              ;cleanup and return
     
@@ -324,7 +324,7 @@ handle_all_psg_channels:
     
     ;for each channel
 @loop_psg_ch:
-    btst  #7, psg_ch_inst_flags(a5) ;if channel is disabled
+    btst  #7, ch_inst_flags(a5)     ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_psg_stream           ;   read stream events
@@ -332,7 +332,7 @@ handle_all_psg_channels:
     jsr handle_psg_pitchbend        ;   handle pitchbend
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
-    adda.w  #psg_ch_size, a5        ;next channel
+    adda.w  #ch_size, a5            ;next channel
     dbf d7, @loop_psg_ch            ;loop end
     
     rts
@@ -342,12 +342,12 @@ handle_all_psg_channels:
 ;   handle_psg_pitchbend
 ;============================================================================
 handle_psg_pitchbend:
-    tst.b   psg_ch_pitchbend_rate(a5)
+    tst.b   ch_pitchbend_rate(a5)
     beq     @return
 
-    move.b  psg_ch_inst_flags(a5), d0
-    move.w  psg_ch_adj_freq(a5), d1    
-    move.b  psg_ch_pitchbend_counter(a5), d3
+    move.b  ch_inst_flags(a5), d0
+    move.w  ch_adj_freq(a5), d1    
+    move.b  ch_pitchbend_counter(a5), d3
 
 ;@check pitchbend
     tst.b   d3
@@ -358,10 +358,10 @@ handle_psg_pitchbend:
 
 @apply_pitchbend:
     bset    #4, d0                              ;"update pitch" flag
-    move.b  psg_ch_pitchbend_scaling(a5), d3    ;reload counter
-    move.b  psg_ch_pitchbend_rate(a5), d2       ;d2 = rate
+    move.b  ch_pitchbend_scaling(a5), d3    ;reload counter
+    move.b  ch_pitchbend_rate(a5), d2       ;d2 = rate
     ext.w   d2                                  ;sign-extend rate
-    add.w   d2, d1                              ;d0 = freq + adjustment
+    add.w   d2, d1                              ;d1 = freq + adjustment
 ;@check max freq
     cmp.w   #max_psg_freq, d1       ;
     blt     @check_min_freq         ;
@@ -369,13 +369,13 @@ handle_psg_pitchbend:
     bra     @writeback_to_struct    ;
 @check_min_freq:
     cmp.w   #min_psg_freq, d1       ;
-    bgt     @writeback_to_struct
-    move.w  #min_psg_freq, d1
+    bgt     @writeback_to_struct    ;
+    move.w  #min_psg_freq, d1       ;clip
 
 @writeback_to_struct:
-    move.b  d0, psg_ch_inst_flags(a5)
-    move.w  d1, psg_ch_adj_freq(a5)
-    move.b  d3, psg_ch_pitchbend_counter(a5)
+    move.b  d0, ch_inst_flags(a5)
+    move.w  d1, ch_adj_freq(a5)
+    move.b  d3, ch_pitchbend_counter(a5)
     
 @return:
     rts    
@@ -386,15 +386,15 @@ handle_psg_pitchbend:
 ;unusable: d7   
 ;============================================================================
 handle_psg_stream:
-    move.b  psg_ch_wait_time(a5), d6    ;check note duration
+    move.b  ch_wait_time(a5), d6    ;check note duration
     beq     @done_waiting               ;if duration == 0, read new code from stream
                                         ;else
-    subi.b  #1, psg_ch_wait_time(a5)    ;decrement note duration counter
+    subi.b  #1, ch_wait_time(a5)    ;decrement note duration counter
     beq     @done_waiting               ;   and check again so we don't wait too long
     rts                                 ;else return
     
 @done_waiting:
-    move.l  psg_ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
+    move.l  ch_stream_ptr(a5), a4   ;a4 = stream pointer for the channel
     cmp.l   #0, a4                      ;null check
     beq     psg_load_first_section
     
@@ -437,19 +437,19 @@ psg_stream_jumptable:
 stream_psg_pitchbend:
     move.b  (a4)+, d0   ;rate
     neg.b   d0          ;switch sign because psg chip is backwards
-    move.b  d0, psg_ch_pitchbend_rate(a5)
+    move.b  d0, ch_pitchbend_rate(a5)
     
     move.b  (a4)+, d0   ;scaling
-    move.b  d0, psg_ch_pitchbend_scaling(a5)
-    move.b  d0, psg_ch_pitchbend_counter(a5)
+    move.b  d0, ch_pitchbend_scaling(a5)
+    move.b  d0, ch_pitchbend_counter(a5)
     bra read_psg_stream
 
 ;==============================================================
 ;==============================================================
 psg_load_first_section:
     ;load table pointers
-    movea.l     psg_ch_section_ptr(a5), a3  ;a3 = section ptr
-    movea.l     psg_ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
+    movea.l ch_section_ptr(a5), a3  ;a3 = section ptr
+    movea.l ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
 
     ;get section index from sequence_table[0]
     clr.w   d1              ;
@@ -461,8 +461,8 @@ psg_load_first_section:
     
     ;write back to struct
     moveq   #0, d0
-    move.w  d0, psg_ch_sequence_idx(a5) 
-    move.l  a4, psg_ch_stream_ptr(a5)
+    move.w  d0, ch_sequence_idx(a5) 
+    move.l  a4, ch_stream_ptr(a5)
     bra read_psg_stream
     
 ;============================================================================
@@ -477,12 +477,12 @@ psg_load_first_section:
 ;============================================================================
 stream_psg_end_section:
     ;load table pointers
-    movea.l     psg_ch_section_ptr(a5), a3  ;a3 = section ptr
-    movea.l     psg_ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
+    movea.l     ch_section_ptr(a5), a3  ;a3 = section ptr
+    movea.l     ch_sequence_ptr(a5), a2 ;a2 = sequence ptr
 
     ;increment sequence index
     clr.w   d0                          ;
-    move.w  psg_ch_sequence_idx(a5), d0 ;d0.w = old index
+    move.w  ch_sequence_idx(a5), d0 ;d0.w = old index
     addi.w  #1, d0                      ;increment index
     
     ;get section index from sequence table
@@ -506,8 +506,8 @@ stream_psg_end_section:
     movea.l (a3, d1.w), a4  ;a4 = next stream pointer 
     
     ;write back to struct
-    move.w  d0, psg_ch_sequence_idx(a5) 
-    move.l  a4, psg_ch_stream_ptr(a5)
+    move.w  d0, ch_sequence_idx(a5) 
+    move.l  a4, ch_stream_ptr(a5)
     
     bra read_psg_stream
     
@@ -530,7 +530,7 @@ stream_psg_load_instrument:
     tst.b   (a4)+           ;align that bad boy
 @word_aligned:
     movea.l (a4)+, a1               ;a1 = instrument pointer
-    move.b  psg_ch_channel(a5), d2
+    move.b  ch_channel_num(a5), d2
     jsr     load_PSG_instrument
     bra read_psg_stream
     
@@ -552,7 +552,7 @@ bad_stream_code:
 ;       writes stream pointer back to channel struct and returns
 ;============================================================================
 exit_psg_stream:
-    move.l   a4, psg_ch_stream_ptr(a5)  ;save stream pointer back to channel struct
+    move.l   a4, ch_stream_ptr(a5)  ;save stream pointer back to channel struct
     rts
     
 ;==============================================================
@@ -565,9 +565,9 @@ exit_psg_stream:
 ;   a5 - channel struct pointer
 ;==============================================================
 stream_psg_stop:
-    clr.b   psg_ch_inst_flags(a5)   ;mark channel as "disabled"
-    clr.l   psg_ch_stream_ptr(a5)   ;wipe stream pointer
-    move.b  psg_ch_channel(a5), d0  ;d0 = channel number
+    clr.b   ch_inst_flags(a5)       ;mark channel as "disabled"
+    clr.l   ch_stream_ptr(a5)       ;wipe stream pointer
+    move.b  ch_channel_num(a5), d0  ;d0 = channel number
     move.b  #0, d1                  ;d1 = volume 0 (max attenuation)    
     jsr     PSG_SetVolume           ;PSG_SetVolume(channel, 0)
     rts
@@ -590,14 +590,14 @@ stream_psg_loop:
     tst.b   (a4)+           ;align that bad boy
 @word_aligned:
     ;move new stream location to channel struct
-    move.l  (a4), psg_ch_stream_ptr(a5)
-    move.l  psg_ch_stream_ptr(a5), a4
+    move.l  (a4), ch_stream_ptr(a5)
+    move.l  ch_stream_ptr(a5), a4
 
     jmp read_psg_stream     ;read more from stream
 
 
 stream_psg_hold:
-    move.b  (a4)+, psg_ch_wait_time(a5)      ;set note duration
+    move.b  (a4)+, ch_wait_time(a5)      ;set note duration
     jmp exit_psg_stream                     ;cleanup and return
 
 
@@ -623,11 +623,11 @@ stream_psg_keyon:
     jsr get_psg_freq_from_note_name_and_octave  ;d1 = timer_value
     
     ;save to struct
-    move.w  d1, psg_ch_base_freq(a5)
-    move.w  d1, psg_ch_adj_freq(a5)
+    move.w  d1, ch_base_freq(a5)
+    move.w  d1, ch_adj_freq(a5)
     
-    bset    #6, psg_ch_inst_flags(a5)   ;set "keyon" flag
-    bset    #4, psg_ch_inst_flags(a5)   ;set "pitch update" flag
+    bset    #6, ch_inst_flags(a5)   ;set "keyon" flag
+    bset    #4, ch_inst_flags(a5)   ;set "pitch update" flag
     
     jmp read_psg_stream                 ;cleanup and return
 
@@ -643,7 +643,7 @@ stream_psg_keyon:
 ;       b   note_duration
 ;==============================================================
 stream_psg_keyoff:    
-    bset  #5, psg_ch_inst_flags(a5)     ;set keyoff flag
+    bset  #5, ch_inst_flags(a5)     ;set keyoff flag
     jmp read_psg_stream
     
 ;==============================================================
@@ -712,13 +712,13 @@ stream_psg_keyoff:
 ;   handle psg adsr
 ;==============================================================
 handle_psg_adsr:
-    move.b  psg_ch_inst_flags(a5), d0   ;d0 = inst flags
+    move.b  ch_inst_flags(a5), d0   ;d0 = inst flags
 ;@check_keyon:
     btst    #6, d0          ;check for keyon event
     beq     @no_keyon
                             ;else handle keyon
     andi.b  #0x90, d0       ;clear everything but the "enable" bit
-    move.b  psg_ch_attack_scaling(a5), psg_ch_adsr_counter(a5)
+    move.b  ch_attack_scaling(a5), ch_adsr_counter(a5)
     bra     @handle_envelope
 @no_keyon:
 ;@check_status
@@ -737,15 +737,15 @@ handle_psg_adsr:
     bclr    #5, d0          ;clear keyoff bit
     move.b  #0x93, d0
     
-    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
+    move.b  ch_release_scaling(a5), d3   ;reload adsr counter
     ;bra @check_release
 @no_keyoff:
 
 @handle_envelope:
     move.b  d0, d1                      ;d1 = copy of d0
     andi.b  #0x03, d1                   ;adsr bits only
-    move.b  psg_ch_current_vol(a5), d2  ;d2 = cur_vol
-    move.b  psg_ch_adsr_counter(a5), d3 ;d3 = adsr counter
+    move.b  ch_current_vol(a5), d2  ;d2 = cur_vol
+    move.b  ch_adsr_counter(a5), d3 ;d3 = adsr counter
 
 ;@check_attack:
     cmp.b   #0x00, d1        ;check if attack
@@ -758,12 +758,12 @@ handle_psg_adsr:
     subq    #1, d3                  ;   d3--
     bra     @writeback_to_struct    ;   writeback
 @apply_attack:
-    move.b  psg_ch_attack_scaling(a5), d3   ;reload adsr counter
-    add.b   psg_ch_attack_rate(a5), d2  ;d2 + ar
-    cmp.b   psg_ch_max_level(a5), d2    ;if max_vol > d2
+    move.b  ch_attack_scaling(a5), d3   ;reload adsr counter
+    add.b   ch_attack_rate(a5), d2  ;d2 + ar
+    cmp.b   ch_max_level(a5), d2    ;if max_vol > d2
     blt     @writeback_to_struct           ;write to struct and return
                                         ;else (max_vol <= d2)
-    move.b  psg_ch_max_level(a5), d2    ;d2 = max_vol
+    move.b  ch_max_level(a5), d2    ;d2 = max_vol
     bra     @next_state
     
 @check_decay:
@@ -776,12 +776,12 @@ handle_psg_adsr:
     subq    #1, d3                  ;   d3--
     bra     @writeback_to_struct    ;   writeback
 @apply_decay:
-    move.b  psg_ch_decay_scaling(a5), d3    ;reload adsr counter
-    sub.b   psg_ch_decay_rate(a5), d2       ;d2 - dr
-    cmp.b   psg_ch_sus_level(a5), d2        ;if sus_vol < d2
+    move.b  ch_decay_scaling(a5), d3    ;reload adsr counter
+    sub.b   ch_decay_rate(a5), d2       ;d2 - dr
+    cmp.b   ch_sus_level(a5), d2        ;if sus_vol < d2
     bgt     @writeback_to_struct            ;write to struct
                                             ;else (sus_vol >= d2)
-    move.b  psg_ch_sus_level(a5), d2        ;d2 = sus_vol
+    move.b  ch_sus_level(a5), d2        ;d2 = sus_vol
     bra     @next_state
     
 @check_sustain:
@@ -797,9 +797,9 @@ handle_psg_adsr:
     subq    #1, d3                  ;   d3--
     bra     @writeback_to_struct    ;   writeback
 @apply_release:
-    move.b  psg_ch_release_scaling(a5), d3   ;reload adsr counter
+    move.b  ch_release_scaling(a5), d3   ;reload adsr counter
 
-    sub.b   psg_ch_release_rate(a5), d2 ;d2 - rr
+    sub.b   ch_release_rate(a5), d2 ;d2 - rr
     tst.b   d2                          ;if d2 > 0
     bgt     @writeback_to_struct        ;   write to struct   
                                         ;else (d2 < 0)
@@ -807,13 +807,13 @@ handle_psg_adsr:
 @next_state:
     addi.b  #1, d1                      ;state++
 @writeback_to_struct:
-    move.b  d2, psg_ch_current_vol(a5)  ;writeback vol
-    move.b  d3, psg_ch_adsr_counter(a5) ;writeback adsr counter
+    move.b  d2, ch_current_vol(a5)  ;writeback vol
+    move.b  d3, ch_adsr_counter(a5) ;writeback adsr counter
     bra @cleanup_and_return
 @cleanup_and_return:
     andi.b  #0x90, d0                   ;mask off low bits
     or.b    d1, d0                      ;d0 |= d1
-    move.b  d0, psg_ch_inst_flags(a5)   ;write to struct
+    move.b  d0, ch_inst_flags(a5)   ;write to struct
 @just_return:
     rts
     
@@ -821,18 +821,18 @@ handle_psg_adsr:
 ;   psg write to chip
 ;==============================================================
 psg_driver_write_to_chip:
-    move.b  psg_ch_channel(a5), d0      ;d0 = channel
-    move.b  psg_ch_current_vol(a5), d1  ;d1 = vol
+    move.b  ch_channel_num(a5), d0      ;d0 = channel
+    move.b  ch_current_vol(a5), d1  ;d1 = vol
     jsr PSG_SetVolume       ;(channel (d0.b), vol (d1.b))
     
-    move.b psg_ch_inst_flags(a5), d5
+    move.b  ch_inst_flags(a5), d5
     btst    #4, d5  ;check pitch update flag
     beq     @return
     bclr    #4, d5  ;clear pitch update flag
-    move.b  psg_ch_channel(a5), d0      ;d0 = channel
-    move.w  psg_ch_adj_freq(a5), d1      ;d0 = channel
+    move.b  ch_channel_num(a5), d0      ;d0 = channel
+    move.w  ch_adj_freq(a5), d1      ;d0 = channel
     jsr PSG_SetFrequency    ;(channel (d0.b), counter (d1.w))
-    move.b  d5, psg_ch_inst_flags(a5)
+    move.b  d5, ch_inst_flags(a5)
 @return
     rts
 ;==============================================================
@@ -872,8 +872,8 @@ note_As     rs.b    0
 note_Bb     rs.b    1
 note_B      rs.b    1    
     
-    ;include 'channel_structs.asm'
-    include 'refactored_ch_structs.asm'
+    include 'channel_structs.asm'
+    ;include 'refactored_ch_structs.asm'
 ;================================================
 song_record_size        equ     2
 song_record_size_bytes  equ     (song_record_size*size_long)
@@ -991,11 +991,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_channel_2
     lea ch_fm_1, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #0, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #0, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 @load_channel_2:
     movea.l (a0)+, a1
@@ -1003,11 +1003,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_channel_3
     lea ch_fm_2, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #1, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #1, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 @load_channel_3:
     movea.l (a0)+, a1
@@ -1015,11 +1015,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_channel_4
     lea ch_fm_3, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #2, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #2, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 @load_channel_4:
     movea.l (a0)+, a1
@@ -1027,11 +1027,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_channel_5
     lea ch_fm_4, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #4, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #4, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 @load_channel_5:
     movea.l (a0)+, a1
@@ -1039,11 +1039,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_channel_6
     lea ch_fm_5, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #5, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #5, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 @load_channel_6:
     movea.l (a0)+, a1
@@ -1051,11 +1051,11 @@ load_song_from_parts_table:
     tst.l   d0
     beq     @load_psg_channels
     lea ch_fm_6, a5     ;channel 
-    move.b #1, fm_ch_is_enabled(a5)
-    move.b #6, fm_ch_channel(a5)
-    move.l  a1, fm_ch_sequence_ptr(a5)
-    move.l  #0, fm_ch_stream_ptr(a5)
-    move.l  a2, fm_ch_section_ptr(a5)
+    move.b #1, ch_channel_flags(a5)
+    move.b #6, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
     
 ;do PSG
 @load_psg_channels:
@@ -1068,11 +1068,11 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @next_psg_channel
-    move.b  #0x80, psg_ch_inst_flags(a5)
-    move.b  d2, psg_ch_channel(a5)
-    move.l  a1, psg_ch_sequence_ptr(a5)
-    move.l  #0, psg_ch_stream_ptr(a5)
-    move.l  a2, psg_ch_section_ptr(a5)
+    move.b  #0x80, ch_inst_flags(a5)
+    move.b  d2, ch_channel_num(a5)
+    move.l  a1, ch_sequence_ptr(a5)
+    move.l  #0, ch_stream_ptr(a5)
+    move.l  a2, ch_section_ptr(a5)
 @next_psg_channel
     adda.w  #psg_ch_size, a5
     addi.b  #1, d2

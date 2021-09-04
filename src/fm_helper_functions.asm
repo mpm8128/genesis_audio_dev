@@ -155,7 +155,7 @@ load_FM_instrument:
 ;   ;;;;d2 = channel (0-2 = side 1, 4-6 = side 2. CTRL uses channel 0)
 ;============================================================================
 write_register_opn2:
-    move.b  fm_ch_channel(a5), d2   ;d2 = channel number
+    move.b  ch_channel_num(a5), d2   ;d2 = channel number
 
     btst	#2, d2          ;check bit to see which side of the 2612 to write to
     bne.b	setup_write_register_opn2_side2
