@@ -175,8 +175,8 @@ write_register_opn2_ctrl:
     ;d1 = data
     ;d2 = channel (4, 5, 6)
 setup_write_register_opn2_side2:
-    BCLR.l	#2, D2                          ;wipe the "top" bit (leaving just the bottom 2 bits)
-	ADD.b	D2, D0                          ;Channel select. 
+    bclr.l	#2, D2                          ;wipe the "top" bit (leaving just the bottom 2 bits)
+	add.b	D2, D0                          ;Channel select. 
     ;fallthrough to side 2
     
 write_register_opn2_side2:

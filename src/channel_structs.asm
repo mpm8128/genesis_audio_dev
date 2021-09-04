@@ -73,6 +73,10 @@ psg_ch_adj_freq         rs.w    1   ;10-bit frequency register value.
 
 ; ;PSG channel automation information
 psg_ch_pitchbend_rate       rs.b    1   ;signed amount to bend up/down
+                                        ;   inverted for PSG chip so that
+                                        ;   we can use positive to mean
+                                        ;   "pitch up" and negative to mean
+                                        ;   "pitch down" in the song files
 psg_ch_pitchbend_scaling    rs.b    1   ;number of frames until next 
                                         ;   pitch adjustment
 psg_ch_pitchbend_counter    rs.b    1   ;counter for scaling
@@ -114,11 +118,10 @@ fm_ch_is_enabled        rs.b    1   ;0 (disabled) or !0 (enabled)
 fm_ch_channel           rs.b    1   ;channel id (0-3)
 fm_ch_wait_time         rs.w    1   ;number of frames to hold the note for
 
-fm_ch_sequence_idx      rs.w    1
+fm_ch_sequence_idx      rs.w    1   ;index into sequence table
 fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
-fm_ch_section_ptr       rs.l    1
-fm_ch_sequence_ptr      rs.l    1   ;
-
+fm_ch_section_ptr       rs.l    1   ;pointer to section table
+fm_ch_sequence_ptr      rs.l    1   ;pointer to sequence table
 
 fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
 fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)

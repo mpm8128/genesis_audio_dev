@@ -49,22 +49,27 @@ demo_section_table:
     dc.b    sc_end_section
     
 @test_stuff_2:
-    M_play_note note_C, 4, 30
-    
-    dc.b    sc_pitchbend, 2, 1    
-    M_play_note note_C, 4, 150
-    
-    dc.b   sc_pitchbend, 0, 0
     M_play_note note_C, 5, 1
     M_play_note note_C, 4, 29
     
-    dc.b    sc_pitchbend, -3, 1
+    dc.b    sc_pitchbend, -9, 1    
     M_play_note note_C, 5, 1
-    M_play_note note_C, 4, 29
+    M_play_note note_C, 4, 14
     
     dc.b   sc_pitchbend, 0, 0
-    M_play_note note_Eb, 5, 1
-    M_play_note note_Eb, 4, 44
+    M_play_note note_Fs, 5, 1
+    M_play_note note_Fs, 4, 29
+    
+    dc.b    sc_pitchbend, 9, 1
+    M_play_note note_Fs, 5, 1
+    dc.b    sc_keyon, note_Fs, 4
+    dc.b    sc_hold, 14
+    dc.b    sc_pitchbend, 0, 0
+    dc.b   sc_hold, 15
+    dc.b    sc_keyoff
+    
+    M_play_note note_C, 5, 1
+    M_play_note note_C, 4, 14
     dc.b    sc_end_section
 
     modend

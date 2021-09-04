@@ -426,6 +426,7 @@ psg_stream_jumptable:
 ;   code: sc_pitchbend
 ;
 ;   sets pitchbend rate/scale
+;       rate 0 is no pitchbend              
 ;
 ;parameters:
 ;   a5 - channel struct pointer
@@ -434,7 +435,10 @@ psg_stream_jumptable:
 ;       b   scale (number of frames to wait)
 ;==============================================================
 stream_psg_pitchbend:
-    move.b  (a4)+, psg_ch_pitchbend_rate(a5)
+    move.b  (a4)+, d0   ;rate
+    neg.b   d0          ;switch sign because psg chip is backwards
+    move.b  d0, psg_ch_pitchbend_rate(a5)
+    
     move.b  (a4)+, d0   ;scaling
     move.b  d0, psg_ch_pitchbend_scaling(a5)
     move.b  d0, psg_ch_pitchbend_counter(a5)
@@ -880,6 +884,7 @@ offset_cza13        rs.l    song_record_size
 offset_demo         rs.l    song_record_size
 offset_cza3         rs.l    song_record_size
 offset_aro2         rs.l    song_record_size
+offset_cza18        rs.l    song_record_size
 ;offset_agr14        rs.l    2
 ;offset_mb           rs.l    2
 num_songs           rs.l    0
@@ -892,6 +897,7 @@ song_table:
     dc.l    cza13_channel_table,    cza13_section_table     ;,    0
     dc.l    cza3_channel_table,     cza3_section_table      ;,     0
     dc.l    aro2_channel_table,     aro2_section_table
+    dc.l    cza18_channel_table,    cza18_section_table     ;,    0
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
@@ -1162,4 +1168,5 @@ M_load_inst: macro inst_name
     include 'songs/cza_3.asm'
     include 'songs/cza13.asm'
     include 'songs/aro2.asm'
+    include 'songs/cza18.asm'
     ;include 'songs/mission_briefing.asm'

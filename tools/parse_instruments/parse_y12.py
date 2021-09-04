@@ -41,7 +41,7 @@ comments = ["det_mul", "tl", "rs_ar", "am_d1r", "d2r", "sl_rr"]
 
 #do the rest of the rows
 for i in range(1, len(comments)):
-    output = format_string.format(comments[i-1], op1[i], op2[i], op3[i], op4[i])
+    output = format_string.format(comments[i], op1[i], op2[i], op3[i], op4[i])
     print(output)
 
 #special case for the last two rows
