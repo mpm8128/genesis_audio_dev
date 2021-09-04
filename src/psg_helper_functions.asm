@@ -23,18 +23,17 @@ min_psg_freq    equ     1
 ;   d2 = channel (0-3)
 ;============================================================================
 load_PSG_instrument:
-    move.l  a1, psg_ch_inst_ptr(a5)
-    move.b  (a1)+, psg_ch_attack_rate(a5)
-    move.b  (a1)+, psg_ch_max_level(a5)
-    move.b  (a1)+, psg_ch_decay_rate(a5)
-    move.b  (a1)+, psg_ch_sus_level(a5)
-    move.b  (a1)+, psg_ch_release_rate(a5)
-    move.b  (a1)+, psg_ch_noise_mode(a5)
-    move.b  (a1)+, psg_ch_attack_scaling(a5)
-    move.b  (a1)+, psg_ch_decay_scaling(a5)
-    move.b  (a1)+, psg_ch_release_scaling(a5)
+    move.l  a1,    ch_inst_ptr(a5)
+    move.b  (a1)+, ch_attack_rate(a5)
+    move.b  (a1)+, ch_max_level(a5)
+    move.b  (a1)+, ch_decay_rate(a5)
+    move.b  (a1)+, ch_sus_level(a5)
+    move.b  (a1)+, ch_release_rate(a5)
+    move.b  (a1)+, ch_attack_scaling(a5)
+    move.b  (a1)+, ch_decay_scaling(a5)
+    move.b  (a1)+, ch_release_scaling(a5)
     
-    move.b  #0, psg_ch_adsr_counter(a5) ;reset this when we reload the instrument
+    move.b  #0, ch_adsr_counter(a5) ;reset this when we reload the instrument
     rts
       
 ;==============================================================
@@ -90,8 +89,8 @@ PSG_Init:
     lea ch_psg_0, a5
     moveq   #3, d7
 @loop_disable_psg_ch:
-    clr.b   psg_ch_inst_flags(a5)
-    bset.b  #2, psg_ch_inst_flags(a5)
+    clr.b   ch_inst_flags(a5)
+    bset.b  #2, ch_inst_flags(a5)
     adda.w  #psg_ch_size, a5
     dbf d7, @loop_disable_psg_ch
 	rts

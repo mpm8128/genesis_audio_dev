@@ -52,7 +52,7 @@ demo_section_table:
     M_play_note note_C, 5, 1
     M_play_note note_C, 4, 29
     
-    dc.b    sc_pitchbend, -9, 1    
+    dc.b    sc_pitchbend, 9, 1    
     M_play_note note_C, 5, 1
     M_play_note note_C, 4, 14
     
@@ -60,7 +60,7 @@ demo_section_table:
     M_play_note note_Fs, 5, 1
     M_play_note note_Fs, 4, 29
     
-    dc.b    sc_pitchbend, 9, 1
+    dc.b    sc_pitchbend, -9, 1
     M_play_note note_Fs, 5, 1
     dc.b    sc_keyon, note_Fs, 4
     dc.b    sc_hold, 14
