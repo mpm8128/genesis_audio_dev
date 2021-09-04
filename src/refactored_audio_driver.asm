@@ -68,10 +68,10 @@ handle_all_fm_channels:
     
     ;for each channel
 @loop_fm_ch:
-    tst.b   ch_channel_flags(a5)    ;if channel is disabled
-    beq     @next_channel           ;   skip it
+    btst  #0, ch_channel_flags(a5)  ;if channel is disabled
+    beq @next_channel               ;   skip it
                                     ;else
-    jsr handle_stream               ;   handle stream data
+    jsr handle_stream               ;   handle stream events
     ;jsr envelopes                  ;   handle any active envelopes
     ;jsr write pitch/volume         ;   write to chip
 @next_channel:
@@ -89,7 +89,7 @@ handle_all_psg_channels:
     
     ;for each channel
 @loop_psg_ch:
-    btst  #7, ch_inst_flags(a5)     ;if channel is disabled
+    btst  #0, ch_channel_flags(a5)  ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_stream               ;   read stream events
@@ -959,7 +959,6 @@ load_song_from_parts_table:
     move.l  a1, d0
     tst.l   d0
     beq     @next_psg_channel
-    move.b  #0x80, ch_inst_flags(a5)
     move.b  #1, ch_channel_flags(a5) ; 0000 0001 (PSG, Enabled)
     move.b  d2, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)

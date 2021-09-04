@@ -247,8 +247,7 @@ VDP_LoadRegisters:
 	dbra   d0, @CopyRegLp		; Decrement d0, and jump back to top of loop if d0 is still >= 0
 	rts
     
-    ;include 'audio_driver.asm'
-    include 'refactored_audio_driver.asm'
+    include 'audio_driver.asm'
     include 'controller_driver.asm'
     include 'sound_test.asm'
     include 'tile_printing.asm'
