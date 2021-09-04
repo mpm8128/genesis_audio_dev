@@ -872,8 +872,8 @@ note_As     rs.b    0
 note_Bb     rs.b    1
 note_B      rs.b    1    
     
-    include 'channel_structs.asm'
-  
+    ;include 'channel_structs.asm'
+    include 'refactored_ch_structs.asm'
 ;================================================
 song_record_size        equ     2
 song_record_size_bytes  equ     (song_record_size*size_long)

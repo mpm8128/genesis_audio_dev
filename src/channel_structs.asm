@@ -52,7 +52,6 @@ psg_ch_decay_scaling    rs.b    1   ;decay scaling (1-255)
 psg_ch_release_scaling  rs.b    1   ;release scaling (1-255)
 psg_ch_adsr_counter     rs.b    1   ;counter for scaling > 1
 
-psg_ch_noise_mode       rs.b    1   ;0-3 (0 for square-wave channels)
 psg_ch_current_vol      rs.b    1   ;0-15
 ;stream stuff
 psg_ch_wait_time        rs.w    1   ;number of frames until next stream event
@@ -97,7 +96,7 @@ psg_ch_pitchbend_counter    rs.b    1   ;counter for scaling
 ; psg_ch_tremelo_time     rs.b    1   ;number of frames before increment/decrement
 ; psg_ch_tremelo_size     rs.b    1   ;max deviation from base volume
 
-psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
+;psg_ch_auto_flags       rs.b    1   ;xYZx LPTV
                                     ;bit 0 - "V" - vibrato enable
                                     ;bit 1 - "T" - tremelo enable
                                     ;bit 2 - "P" - pitch envelope enable
@@ -123,42 +122,42 @@ fm_ch_stream_ptr        rs.l    1   ;pointer to stream of audio data
 fm_ch_section_ptr       rs.l    1   ;pointer to section table
 fm_ch_sequence_ptr      rs.l    1   ;pointer to sequence table
 
-fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
+;fm_ch_base_vol          rs.b    1   ;"base" volume (pre-trem/envelope)
 fm_ch_note_name         rs.b    1   ;current note (pre-vibr/envelope)
 fm_ch_note_octave       rs.b    1   ;current octave (pre-vibr/envelope)
-fm_ch_algorithm         rs.b    1   ;algorithm (0-7)
+;fm_ch_algorithm         rs.b    1   ;algorithm (0-7)
 fm_ch_lr_amfm           rs.b    1   ;LRAA xFFF
 
 fm_ch_inst_ptr          rs.l    1   ;pointer to "base" instrument data
 
 ;fm channel automation information
-fm_ch_freq_auto_idx     rs.b    1   ;index into pitchbend envelope
-fm_ch_freq_auto_time    rs.b    1   ;number of frames on each index
-fm_ch_freq_auto_ptr     rs.l    1   ;pointer to the envelope
+; fm_ch_freq_auto_idx     rs.b    1   ;index into pitchbend envelope
+; fm_ch_freq_auto_time    rs.b    1   ;number of frames on each index
+; fm_ch_freq_auto_ptr     rs.l    1   ;pointer to the envelope
 
-fm_ch_vol_auto_idx      rs.b    1   ;index into volume envelope
-fm_ch_vol_auto_time     rs.b    1   ;number of frames on each index
-fm_ch_vol_auto_ptr      rs.l    1   ;pointer to the envelope
+; fm_ch_vol_auto_idx      rs.b    1   ;index into volume envelope
+; fm_ch_vol_auto_time     rs.b    1   ;number of frames on each index
+; fm_ch_vol_auto_ptr      rs.l    1   ;pointer to the envelope
 
-fm_ch_st_auto_idx       rs.b    1   ;index into stereo envelope
-fm_ch_st_auto_time      rs.b    1   ;number of frames on each index
-fm_ch_st_auto_ptr       rs.l    1   ;pointer to the envelope
+; fm_ch_st_auto_idx       rs.b    1   ;index into stereo envelope
+; fm_ch_st_auto_time      rs.b    1   ;number of frames on each index
+; fm_ch_st_auto_ptr       rs.l    1   ;pointer to the envelope
 
-fm_ch_vibrato_time      rs.b    1   ;number of frames before increment/decrement
-fm_ch_vibrato_size      rs.b    1   ;max deviation from base frequency
+; fm_ch_vibrato_time      rs.b    1   ;number of frames before increment/decrement
+; fm_ch_vibrato_size      rs.b    1   ;max deviation from base frequency
 
-fm_ch_tremelo_time      rs.b    1   ;number of frames before increment/decrement
-fm_ch_tremelo_size      rs.b    1   ;max deviation from base volume
+; fm_ch_tremelo_time      rs.b    1   ;number of frames before increment/decrement
+; fm_ch_tremelo_size      rs.b    1   ;max deviation from base volume
 
-fm_ch_auto_flags        rs.b    1   ;XYZS LPTV
-                                    ;bit 0 - "V" - vibrato enable
-                                    ;bit 1 - "T" - tremelo enable
-                                    ;bit 2 - "P" - pitch envelope enable
-                                    ;bit 3 - "L" - volume envelope enable
-                                    ;bit 4 - "S" - stereo envelope enable
-                                    ;bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
-                                    ;bit 7 - "X" - stereo envelope mode (0 - one-shot, 1 - loop)
+; fm_ch_auto_flags        rs.b    1   ;XYZS LPTV
+                                    ; ;bit 0 - "V" - vibrato enable
+                                    ; ;bit 1 - "T" - tremelo enable
+                                    ; ;bit 2 - "P" - pitch envelope enable
+                                    ; ;bit 3 - "L" - volume envelope enable
+                                    ; ;bit 4 - "S" - stereo envelope enable
+                                    ; ;bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
+                                    ; ;bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
+                                    ; ;bit 7 - "X" - stereo envelope mode (0 - one-shot, 1 - loop)
 
 
 fm_ch_size              rs.w    0   ;size of the struct

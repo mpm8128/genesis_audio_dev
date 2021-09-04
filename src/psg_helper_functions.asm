@@ -29,7 +29,6 @@ load_PSG_instrument:
     move.b  (a1)+, psg_ch_decay_rate(a5)
     move.b  (a1)+, psg_ch_sus_level(a5)
     move.b  (a1)+, psg_ch_release_rate(a5)
-    move.b  (a1)+, psg_ch_noise_mode(a5)
     move.b  (a1)+, psg_ch_attack_scaling(a5)
     move.b  (a1)+, psg_ch_decay_scaling(a5)
     move.b  (a1)+, psg_ch_release_scaling(a5)
