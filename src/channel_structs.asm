@@ -107,7 +107,6 @@ ch_adj_freq             rs.w    1   ;10-bit frequency register value.
                                 ;   via envelope. This is what gets
                                 ;   written to the SN76489
 
-;   PSG channel automation information
 ch_pitchbend_rate       rs.b    1   ;signed amount to bend up/down
                                     ;   inverted for PSG chip so that
                                     ;   we can use positive to mean
@@ -116,6 +115,22 @@ ch_pitchbend_rate       rs.b    1   ;signed amount to bend up/down
 ch_pitchbend_scaling    rs.b    1   ;number of frames until next 
                                     ;   pitch adjustment
 ch_pitchbend_counter    rs.b    1   ;counter for scaling
+
+;------------
+;   vibrato
+ch_vibrato_state        rs.b    1   ;xxxx xxSS
+                                    ;   0x00 - positive, increasing
+                                    ;   0x01 - positive, decreasing
+                                    ;   0x02 - negative, decreasing
+                                    ;   0x03 - negative, increasing
+                                    ;
+ch_vibrato_rate         rs.b    1   ;amount to increase/decrease each frame
+
+ch_vibrato_speed        rs.b    1   ;number of frames in 1/4 period
+                                    ;   time from adj_freq
+                                    ;   to max deviation
+ch_vibrato_depth        rs.b    1   ;max deviation from base_freq
+ch_vibrato_counter      rs.b    1   ;
 
 psg_ch_size             rs.w    0
 fm_ch_size              rs.w    0
