@@ -72,7 +72,8 @@ handle_all_fm_channels:
     beq @next_channel               ;   skip it
                                     ;else
     jsr handle_stream               ;   handle stream events
-    jsr handle_pitchbend        ;   handle pitchbend
+    jsr handle_vibrato
+    jsr handle_pitchbend            ;   handle pitchbend
     ;jsr envelopes                  ;   handle any active envelopes
     jsr fm_driver_write_to_chip
 @next_channel:
@@ -95,6 +96,7 @@ handle_all_psg_channels:
                                     ;else
     jsr handle_stream               ;   read stream events
     jsr handle_psg_adsr             ;   adjust with envelope
+    jsr handle_vibrato
     jsr handle_pitchbend        ;   handle pitchbend
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
@@ -144,6 +146,7 @@ stream_jumptable:
     dc.l    stream_hold
     dc.l    stream_end_section
     dc.l    stream_pitchbend
+    dc.l    stream_vibrato
     
 ;==============================================================
 ;   stream_load_first_section
@@ -484,6 +487,46 @@ stream_pitchbend:
     move.b  d0, ch_pitchbend_scaling(a5)
     move.b  d0, ch_pitchbend_counter(a5)
     bra read_stream
+
+;==============================================================
+;   stream_vibrato
+;   code: sc_vibrato
+;
+;   sets vibrato speed and depth
+;
+;parameters:
+;   a5 - channel struct pointer
+;   a4 - stream pointer
+;       b - speed (quarter of a period)
+;       b - depth (max deviation from base value)
+;==============================================================
+stream_vibrato:
+    ;move.b  (a4)+, ch_vibrato_speed(a5)
+    move.b  (a4)+, d0   ;vibrato speed
+    move.b  d0, ch_vibrato_speed(a5)
+    move.b  d0, ch_vibrato_counter(a5)  ;reset counter
+    ext.w   d0
+    
+    move.b  (a4)+, d1   ;ch_vibrato_depth(a5)
+    move.b  d1, ch_vibrato_depth(a5)
+    ext.w   d1
+    
+    tst.w   d0
+    beq     @skip_div   ;don't divide by zero
+    tst.w   d1
+    beq     @skip_div   ;don't divide zero by anything
+    
+    divu    d0, d1  ;d1 = d1/d0 [16b(r), 16b(q)]
+                    ;d1 = vibrato rate
+                    ;ignore remainder
+@skip_div:
+    move.b  d1, ch_vibrato_rate(a5)
+    
+    ;reset adj_freq from any previous vibrato/automation
+    move.w  ch_base_freq(a5), ch_adj_freq(a5)
+    
+    jmp read_stream
+
     
 ;============================================================================
 ;   handle_pitchbend
@@ -542,6 +585,10 @@ handle_pitchbend:
 @writeback_to_struct:
     move.b  d0, ch_inst_flags(a5)
     move.w  d1, ch_adj_freq(a5)
+    move.w  d1, ch_base_freq(a5)    ;overwrite base freq too
+                                    ;this will play nicer with 
+                                    ; vibrato and other automation
+
     move.b  d3, ch_pitchbend_counter(a5)
     
 @return:
@@ -735,6 +782,45 @@ handle_psg_adsr:
     rts
     
 ;==============================================================
+;   handle_vibrato
+;==============================================================
+handle_vibrato:
+    tst.b   ch_vibrato_depth(a5)
+    beq     @return ;no action needed if depth is zero
+    ;else depth != 0
+    
+;@adjust_pitch
+    move.b  ch_inst_flags(a5), d0       ;d0 = inst flags
+    bset    #4, d0      ; set "update pitch" flag
+
+    move.b  ch_vibrato_rate(a5), d2     ;d2 = rate
+    ext.w   d2  ;sign-extend rate
+    move.w  ch_adj_freq(a5), d1     ;d1 = adj freq
+    add.w   d2, d1  ;adj freq = adj + rate
+
+    move.b  ch_vibrato_counter(a5), d3  ;d3 = counter
+    
+    tst.b   d3  ;if counter == 0
+    ble     @switch_direction
+    ;else
+    subi.b  #1, d3
+    bra     @writeback_to_struct
+    
+@switch_direction:
+    move.b  ch_vibrato_speed(a5), d3    ;reload counter
+    lsl.b   #1, d3      ;counter = 1/2 period
+    ;d2 = rate
+    neg.b   d2  ;invert d2 and write it back
+    move.b  d2, ch_vibrato_rate(a5)
+    
+@writeback_to_struct:
+    move.b  d0, ch_inst_flags(a5)
+    move.w  d1, ch_adj_freq(a5)
+    move.b  d3, ch_vibrato_counter(a5)
+@return:
+    rts
+    
+;==============================================================
 ;   psg write to chip
 ;==============================================================
 psg_driver_write_to_chip:
@@ -803,6 +889,7 @@ sc_reg_write    rs.b        1
 sc_hold         rs.b        1
 sc_end_section  rs.b        1
 sc_pitchbend    rs.b        1
+sc_vibrato      rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
