@@ -5,9 +5,9 @@
 ;===========================
 ;   Channel Table
 demo_channel_table:
-    dc.l    demo_fm_vibrato_seq_table
-    ;dc.l    demo_ch1_seq_table
-    ;dc.l    0
+    ;dc.l    demo_fm_vibrato_seq_table
+    dc.l    demo_ch0_seq_table
+    dc.l    0
     dc.l    0
     dc.l    0
     
@@ -16,7 +16,7 @@ demo_channel_table:
     dc.l    0
     
     ;dc.l    demo_psg0_seq_table
-    dc.l    0
+    ;dc.l    demo_psg0_seq_table
     dc.l    0
     dc.l    0
     dc.l    0

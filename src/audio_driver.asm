@@ -585,6 +585,10 @@ handle_pitchbend:
 @writeback_to_struct:
     move.b  d0, ch_inst_flags(a5)
     move.w  d1, ch_adj_freq(a5)
+    move.w  d1, ch_base_freq(a5)    ;overwrite base freq too
+                                    ;this will play nicer with 
+                                    ; vibrato and other automation
+
     move.b  d3, ch_pitchbend_counter(a5)
     
 @return:
