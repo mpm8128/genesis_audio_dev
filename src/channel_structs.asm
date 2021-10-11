@@ -134,7 +134,7 @@ ch_vibrato_counter      rs.b    1   ;
 
 psg_ch_size             rs.w    0
 fm_ch_size              rs.w    0
-ch_size                 rs.w    0
+;ch_size                 rs.w    0
 
 ;==============================================================
 ; MEMORY MAP

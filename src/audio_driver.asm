@@ -43,7 +43,7 @@ M_split_by_channel_type: macro psg_fn, fm_fn, dac_fn, q_fn
     beq \fm_fn
     cmp.b   #0x08, d5   ;if d5 == xxxx 10xx, DAC/PCM (sample)
     beq \dac_fn
-    ;else d5 == xxxx 11xx, "default" case?
+    ;else d5 == xxxx 11xx, "????" case?
     bra \q_fn
     endm
 ;============================================================================
@@ -100,7 +100,7 @@ handle_all_psg_channels:
     jsr handle_pitchbend        ;   handle pitchbend
     jsr psg_driver_write_to_chip    ;   write to chip
 @next_channel
-    adda.w  #ch_size, a5            ;next channel
+    adda.w  #psg_ch_size, a5            ;next channel
     dbf d7, @loop_psg_ch            ;loop end
     
     rts
