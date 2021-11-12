@@ -165,6 +165,7 @@ write_register_opn2:
     bne.b	setup_write_register_opn2_side2
     ;else fallthrough to side 1/ctrl
 write_register_opn2_side1:
+    ;subi.b  #1, d2          ;zero-index for the chip
     add.b	d2, d0          ;Channel select. 
 write_register_opn2_ctrl:
     ;M_request_Z80_bus

@@ -1078,7 +1078,10 @@ load_song_from_parts_table:
     jsr     clear_audio_memory
     jsr     PSG_Init            ;re-init psg
     jsr     FM_init             ;re-init fm
-    ;jsr     DAC_init           ;re-init dac
+    jsr     init_z80            ;re-init z80
+                    ;probably unneccessary, but
+                    ;   we do it here to ensure
+                    ;   consistency while testing
 
     move.w  (sp)+, d0   ;pop d0
 
@@ -1087,84 +1090,35 @@ load_song_from_parts_table:
     movea.l $0(a0,d0.w), a0 ;a0 = channel_table
                             ;[channel_table, section_table]
                             
-    ;load FM channels
-@load_channel_1:
+    ;do FM
+@load_fm_channels:
+    moveq   #5, d1      ;loop counter
+    move.b  #0, d2      ;channel number (0-index)
+    lea     ch_fm_1, a5
+@for_each_fm_channel
     movea.l (a0)+, a1
     move.l  a1, d0
     tst.l   d0
-    beq     @load_channel_2
-    lea     ch_fm_1, a5     ;channel 
+    beq     @next_fm_channel
     move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #0, ch_channel_num(a5)
+    move.b  d2, ch_channel_num(a5)
     move.l  a1, ch_sequence_ptr(a5)
     move.l  #0, ch_stream_ptr(a5)
     move.l  a2, ch_section_ptr(a5)
+@next_fm_channel:
+    adda.w  #fm_ch_size, a5
+    addi.b  #1, d2
+    ;opn2 channel addressing is 0-2, 4-6 so we skip ch3
+    cmp.b   #3, d2
+    bne     @skip_ch3
+    addi.b  #1, d2
+@skip_ch3    
+    dbf d1, @for_each_fm_channel
     
-@load_channel_2:
-    movea.l (a0)+, a1
-    move.l  a1, d0
-    tst.l   d0
-    beq     @load_channel_3
-    lea     ch_fm_2, a5     ;channel 
-    move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #1, ch_channel_num(a5)
-    move.l  a1, ch_sequence_ptr(a5)
-    move.l  #0, ch_stream_ptr(a5)
-    move.l  a2, ch_section_ptr(a5)
-    
-@load_channel_3:
-    movea.l (a0)+, a1
-    move.l  a1, d0
-    tst.l   d0
-    beq     @load_channel_4
-    lea     ch_fm_3, a5     ;channel 
-    move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #2, ch_channel_num(a5)
-    move.l  a1, ch_sequence_ptr(a5)
-    move.l  #0, ch_stream_ptr(a5)
-    move.l  a2, ch_section_ptr(a5)
-    
-@load_channel_4:
-    movea.l (a0)+, a1
-    move.l  a1, d0
-    tst.l   d0
-    beq     @load_channel_5
-    lea     ch_fm_4, a5     ;channel 
-    move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #4, ch_channel_num(a5)
-    move.l  a1, ch_sequence_ptr(a5)
-    move.l  #0, ch_stream_ptr(a5)
-    move.l  a2, ch_section_ptr(a5)
-    
-@load_channel_5:
-    movea.l (a0)+, a1
-    move.l  a1, d0
-    tst.l   d0
-    beq     @load_channel_6
-    lea     ch_fm_5, a5     ;channel 
-    move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #5, ch_channel_num(a5)
-    move.l  a1, ch_sequence_ptr(a5)
-    move.l  #0, ch_stream_ptr(a5)
-    move.l  a2, ch_section_ptr(a5)
-    
-@load_channel_6:
-    movea.l (a0)+, a1
-    move.l  a1, d0
-    tst.l   d0
-    beq     @load_psg_channels
-    lea     ch_fm_6, a5     ;channel 
-    move.b  #5, ch_channel_flags(a5) ; 0000 0101 (FM, Enabled)
-    move.b  #6, ch_channel_num(a5)
-    move.l  a1, ch_sequence_ptr(a5)
-    move.l  #0, ch_stream_ptr(a5)
-    move.l  a2, ch_section_ptr(a5)
-    
-;do PSG
+    ;now do PSG
 @load_psg_channels:
-
     moveq   #3, d1  ;loop counter
-    move.b  #0, d2  ;channel number
+    move.b  #0, d2  ;channel number (0-index)
     lea     ch_psg_0, a5
 @for_each_psg_channel
     movea.l (a0)+, a1
