@@ -73,15 +73,43 @@ setup_poweron:
 
 ;==============================================================
 ;   init z80
-;   halts the z80 so we can use the FM chip
 ;==============================================================
+Z80_RAM_start   equ $00A00000
+Z80_bus_req     equ $00A11100
+Z80_reset       equ $00A11200
+Z80_driver_length equ 0x187A
+
 init_z80:
-    move.w	#$100,($A11100).l	;Stop the Z80
-    move.w	#$100,($A11200).l	;Reset the Z80
-@wait_for_z80:
-    btst	#0,($A11100).l
-    bne	@wait_for_z80           ;Wait for z80 to halt
+    move.w  #$0,   (Z80_reset)      ;reset the z80    
+    move.w  #$100, (Z80_bus_req)    ;get the z80 bus
+    move.w  #$100, (Z80_reset)      ;release the reset line
+    
+    ;copy z80 code to the z80
+    LEA     Z80_RAM_start, a0
+    LEA     z80_driver_start, a1      ;a0 = pointer to z80 code on ROM
+    move.l  #z80_driver_end-z80_driver_start-1, d7
+@loop_copy_to_z80:
+    move.b  (a1)+, (a0)+
+    dbf     d7, @loop_copy_to_z80
+    
+    move.w  #$0, (Z80_reset)        ;assert reset again
+    ;cycle count
+    move.w  0x20, d7                ;wait for z80 to be ready
+@cycle_count:
+    dbf     d0, @cycle_count
+    
+    move.w  #$100,  (Z80_reset)      ;release reset    
+    move.w  #$0,    (Z80_bus_req)    ;release bus    
     rts
+
+;============================================================================
+;   Z80 driver
+;============================================================================
+    even
+z80_driver_start:
+    incbin  '../build/pcm_driver.cim'
+z80_driver_end:
+    even
   
 ;==============================================================
 ;   Demo initialization

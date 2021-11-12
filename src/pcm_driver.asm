@@ -18,80 +18,84 @@
 
 ;wait remaining cycles to play next sample
 
-    z80
+    .z80
     org 0000h
+    
+;======================================================
+;   reset code and other miscellaneous initialization
+;======================================================
 code_start:
 reset_0:
-    DI                  ;disable interrupts during reset
-    IM  1               ;set vblank interrupt to reset_38
-    LD  A, 0xFF         ;A = stop code
-    LD  sp, $1000       ;initialize the stack pointer
+    DI                  ;disable interrupts
+    LD  A, 0x00         ;clear accumulator
+    LD  (mailbox), A    ;clear mailbox
+    LD  sp, 0x2000      ;initialize the stack pointer
     LD  IX, opn2_ctrl   ;IX = 0x4000
-    EI                  ;enable interrupts
-    ;JR playback_setup
+    ;fallthrough to "paused" state
 
-idle_loop:
-    JR idle_loop    ;wait forever
+;======================================================
+;   idles waiting for a signal from the main processor
+;======================================================
+pause_dac:
+    LD  A, (mailbox)     ;get value in mailbox
+    OR  A                ;   set status register
+    JR  z, pause_dac     ;if zero, keep waiting
+    JR  playback_setup   ;else do some playback
+    
+    
     
 playback_ptr:
-    defw 0x1000
+    defw 0x500
+
+    org 0020h
+mailbox:
+    defb 0x00
    
 opn2_ctrl   equ 0x4000
-opn2_data   equ 0x4001
     
-    org 0038h
-reset_38:
-vblank_isr:
-    DI
-    EI
-    RETI
-    
+;    org 0038h
+;reset_38:
+;vblank_isr:
+;    DI
+;    EI
+;    RETI
+
+    org 0030h
 playback_setup:
     ;load playback_ptr into a register
-    LD  HL, (playback_ptr)
+    LD  HL, test_wav
+    LD  (IX), 0x2A      ;select DAC register
 playback_loop:
-    ;get next byte
-    LD  E, (HL)
-    
-    ;write to 2612
-wait_for_busy_clear_ctrl:
-    LD  A, (IX)             ;B = opn2_ctrl read
-    BIT 7, A                ;test bit 7
-    ;   if bit 7 clear, get out of here
-    JR  Z, write_register_num
-    ;   else, keep waiting
-    JR  wait_for_busy_clear_ctrl
-    
-write_register_num:
-    LD  A, 0x2A     ;A = DAC register
-    LD  (IX), A     ;write reg to opn2
-    
-    NOP
 
-wait_for_busy_clear_data:
-    LD  A, (IX)             ;B = opn2_ctrl read
-    BIT 7, A                ;test bit 7
-    ;   if bit 7 clear, get out of here
-    JR  Z, write_data
-    ;   else, keep waiting
-    JR  wait_for_busy_clear_data    
+    ;LD  A, 0x01
+;timing_adjust:
+;    INC A
+;    JR  z, timing_adjust
     
-write_data:
-    LD  A, E    ;A = byte of PCM data
-    LD (IX+1), A
+    LD  E, (HL)     ;get current byte
+    LD (IX+1), E    ;write data
    
-   
-    LD  A, 0xFF
     ;compare A to the byte at address HL, 
     ;   increment HL, decrement BC
     ;if byte == 0xFF (the value stored in A),
     ;   branch to setup
+    LD  A, 0xFF
     CPI 
-    JR Z, playback_setup
+    JR  z, sample_finished
+    
+    ;check mailbox every cycle
+    LD  A, (mailbox)     ;get value in mailbox
+    OR  A                ;   set status register
+    JR  z, pause_dac     ;if zero, keep waiting
     
     ;else keep playing
     JR playback_loop
     
-    org 1000h
+sample_finished:
+    LD  A, 0x00
+    LD  (mailbox), A    ;write "done" to the mailbox
+    JR  pause_dac       ;wait for instructions
+    
+    org 500h
 test_wav:
     incbin  "songs/test.wav"

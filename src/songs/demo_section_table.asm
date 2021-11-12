@@ -9,14 +9,14 @@ demo_channel_table:
     dc.l    demo_ch0_seq_table
     dc.l    0
     dc.l    0
-    dc.l    0
+    ;dc.l    0
     
     dc.l    0
     dc.l    0
-    dc.l    0
+    dc.l    demo_dac_seq_table
     
     ;dc.l    demo_psg0_seq_table
-    ;dc.l    demo_psg0_seq_table
+    dc.l    demo_psg0_seq_table
     dc.l    0
     dc.l    0
     dc.l    0
@@ -32,6 +32,11 @@ demo_ch0_seq_table:
 demo_psg0_seq_table:
     dc.b    1, 2
     dc.b    -1, 1
+
+demo_dac_seq_table:
+    dc.b    4, 5
+    dc.b    -1, 0
+
 
 demo_fm_vibrato_seq_table:
     dc.b    0, 3
@@ -50,9 +55,21 @@ demo_section_table:
     dc.l    @load_psg_inst_1
     dc.l    @test_stuff_2
     dc.l    @test_vibrato_3
+    dc.l    @setup_dac
+    dc.l    @test_dac
+    
+@setup_dac:
+    dc.b    sc_signal_z80, 0x01
+    dc.b    sc_end_section
+    
+@test_dac:
+    dc.b    sc_hold, 15
+    dc.b    sc_end_section
+    
     
 @load_fm_inst_0:
-    M_load_inst Inst_percussive_organ_1
+    ;M_load_inst Inst_percussive_organ_1
+    dc.b    sc_reg_write, 0x2B, 0x80
     dc.b    sc_end_section
     
 @load_psg_inst_1:
@@ -60,6 +77,9 @@ demo_section_table:
     dc.b    sc_end_section
     
 @test_stuff_2:
+    M_play_rest 100
+    dc.b    sc_end_section
+
     M_play_note note_C, 5, 1
     M_play_note note_C, 4, 29
     

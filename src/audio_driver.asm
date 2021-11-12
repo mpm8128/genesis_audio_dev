@@ -30,7 +30,7 @@ M_request_Z80_bus: macro
     endm
     
 M_return_Z80_bus: macro
-    move.w  #0, z80_bus_request_addr
+    move.w  #$0, z80_bus_request_addr
     endm
     
 M_split_by_channel_type: macro psg_fn, fm_fn, dac_fn, q_fn
@@ -46,6 +46,8 @@ M_split_by_channel_type: macro psg_fn, fm_fn, dac_fn, q_fn
     ;else d5 == xxxx 11xx, "????" case?
     bra \q_fn
     endm
+    
+
 ;============================================================================
 ;   Entry point -> audio_driver
 ;============================================================================
@@ -54,15 +56,58 @@ M_split_by_channel_type: macro psg_fn, fm_fn, dac_fn, q_fn
     ;this is the entry point for this 'module'
 audio_driver:
     ;jsr top_level_stuff
-    jsr handle_all_psg_channels     ;all psg channels
+    ;jsr handle_dac                  ;communication with z80
     jsr handle_all_fm_channels      ;all fm channels    
-    ;jsr handle_dac             ;or maybe make the z80 do this one
+    jsr handle_all_psg_channels     ;all psg channels
+
     rts
+    
+    
+;============================================================================
+;   handle dac
+;============================================================================
+;handle_dac:
+    
+    ;rts
+    
+;============================================================================
+;   pauses the z80 and sets up the 2612 for FM writes
+;============================================================================
+handle_all_fm_start:
+    M_request_Z80_bus
+    
+    ;disable DAC
+    move.b  0x2B, d0    ;DAC enable register
+    move.b  0x00, d1    ;disable it
+    jsr write_register_opn2_ctrl    ;write to chip
+    rts
+    
+
+;============================================================================
+;   unpauses the z80 and sets up the 2612 for DAC writes
+;============================================================================
+handle_all_fm_end:
+    ;re-enable DAC
+    move.b  0x2B, d0    ;DAC enable register
+    move.b  0xFF, d1    ;enable it
+    jsr write_register_opn2_ctrl    ;write to chip
+
+    ;set address to DAC so the z80 doesn't have to
+    move.b  0x2A, d0        ;DAC data register
+    jsr set_address_opn2    ;write to chip
+
+    ;unpause the z80
+    M_return_Z80_bus
+    rts
+
+
     
 ;============================================================================
 ;   handle_all_fm_channels
 ;============================================================================
 handle_all_fm_channels:
+    jsr handle_all_fm_start
+
     lea ch_fm_1, a5     ;a5 = pointer to first fm channel struct
     moveq   #5, d7      ;d7 = number of FM channels -1 (loop counter)
     
@@ -80,6 +125,7 @@ handle_all_fm_channels:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
 
+    jsr handle_all_fm_end
     rts
 
 ;============================================================================
@@ -147,6 +193,7 @@ stream_jumptable:
     dc.l    stream_end_section
     dc.l    stream_pitchbend
     dc.l    stream_vibrato
+    dc.l    stream_send_z80_signal
     
 ;==============================================================
 ;   stream_load_first_section
@@ -171,6 +218,20 @@ stream_load_first_section:
     move.w  d0, ch_sequence_idx(a5) 
     move.l  a4, ch_stream_ptr(a5)
     bra read_stream
+
+
+;==============================================================
+;   stream_send_z80_signal
+;
+;parameters:
+;   a4 - stream pointer
+;       b   data to put in mailbox
+;==============================================================
+stream_send_z80_signal:
+    move.b  (a4)+, d0
+    jsr dac_send_signal_code
+    bra read_stream
+
 
 ;==============================================================
 ;   stream_end_section
@@ -890,6 +951,7 @@ sc_hold         rs.b        1
 sc_end_section  rs.b        1
 sc_pitchbend    rs.b        1
 sc_vibrato      rs.b        1
+sc_signal_z80   rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
@@ -1016,6 +1078,7 @@ load_song_from_parts_table:
     jsr     clear_audio_memory
     jsr     PSG_Init            ;re-init psg
     jsr     FM_init             ;re-init fm
+    ;jsr     DAC_init           ;re-init dac
 
     move.w  (sp)+, d0   ;pop d0
 
@@ -1130,6 +1193,7 @@ load_song_from_parts_table:
 ;============================================================================
   
     include 'fm_helper_functions.asm'
+    include 'dac_helper_functions.asm'
     
 ;============================================================================
 ;   Song macros and includes
