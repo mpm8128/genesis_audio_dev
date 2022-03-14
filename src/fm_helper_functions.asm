@@ -15,6 +15,7 @@ min_fm_freq    equ     1
     ;initializes the 2612 by writing a keyoff for every channel
 ;============================================================================
 
+;TODO - make this actually wipe instrument data and clear the DAC
 FM_init:
     movea.l 0, a5
     

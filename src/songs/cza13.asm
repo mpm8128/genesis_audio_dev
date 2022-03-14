@@ -86,6 +86,8 @@ cza13_echo_seq_table:
     dc.b    -1, 2
 
 cza13_drum_seq_table:
+    ;disable dac
+    dc.b    6   
     ;a section
     rept    2
     dc.b    16, 16, 17, 18
@@ -109,7 +111,7 @@ cza13_section_table:
     dc.l    @load_plink_03
     dc.l    @load_lead_04
     dc.l    @load_echo_05
-    dc.l    0
+    dc.l    @disable_dac_06
 
     ;bass
     dc.l    @bass_a1_07
@@ -152,6 +154,11 @@ cza13_section_table:
 
 ;====
 ;sections
+
+@disable_dac_06:
+    dc.b    sc_signal_z80, 0
+    dc.b    sc_reg_write, 0x2B, 0x00
+    dc.b    sc_end_section
 
 @echo_wait:
     M_play_rest 20

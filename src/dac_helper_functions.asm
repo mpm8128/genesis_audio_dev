@@ -32,21 +32,28 @@ dac_send_signal_code:
     rts
     
 dac_send_sample_address:
-    move.l  d0, d1  ;copy address to d1
-    
-    ;calculate bank number and write to z80
+    ;extract bank number and write to z80
     lsl.l   #1, d0  ;move bit 15 into upper word
     swap    d0      ;swap upper/lower words
     andi.w  #0xFF, d0  ;mask bottom 8 bits (15-22 of original address)
+                    ;technically bank selection
+                    ;   is 9 bits, but we trash
+                    ;   the MSB because it makes
+                    ;   everything much more complicated
+                    ;   and we're not planning to
+                    ;   work on samples in RAM anyway
     move.w  d0, (z80_sample_bank)
     
-    ;mask off offset and write to z80
-    andi.w  #0x7FFF, d1  ;mask off bit 15
-                        ;we have to set this on the z80
-                        ;   when we switch banks anyway
-                        ;   so there's no point in setting
-                        ;   it here
-    move.w  d1, (z80_sample_offset)
+    ;fix address endian-ness
+    swap    d0      ;swap it back 
+    lsr.w   #1, d0  ;shift back down
+            ;bits 0-14 in the right place
+            ;bit 15 gets trashed by the z80
+            
+    ;write low-byte first, then high-byte
+    move.b  d0, (z80_sample_offset)
+    lsr.w   #8, d0
+    move.b  d0, (z80_sample_offset+1)
     
     rts
     

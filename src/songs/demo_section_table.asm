@@ -68,6 +68,7 @@ demo_section_table:
     
 @test_dac:    
     dc.b    sc_hold, 0xFF
+    dc.b    sc_stop
     dc.b    sc_end_section
     
     

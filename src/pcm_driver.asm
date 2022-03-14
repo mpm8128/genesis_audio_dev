@@ -46,18 +46,21 @@ pause_dac:
  
     org 0020h
 mailbox:
-    defb 0x00   ;[0]
-    defb 0x00   ;[1]
-    defb 0x00   ;[2]
-    defb 0x00   ;[3]
+    defb 0x00   ;[20]
+    defb 0x00   ;[21]
+    defb 0x00   ;[22]
+    defb 0x00   ;[23]
 
 sample_bank:
-    defb 0x00   ;[0]
-    defb 0x00
-sample_offset:
+    defb 0x00   ;[24]
+    defb 0x00   ;[25]
+    
+    
+    org 0026h
+sample_offset:  ;[26/27]
     defw 0x0000
-playback_ptr:
-    defw 0x0000   
+;playback_ptr:   ;[28/29]
+;    defw 0x0000   
    
 opn2_ctrl   equ 0x4000
 bank_reg    equ 0x6000
@@ -66,13 +69,8 @@ bank_start  equ 0x8000
     org 0x0040
     ;received "play" signal
 play_dac:    
-    ;copy starting sample offset to playback ptr
-
-    ;LD  (playback_ptr), DE
-
     LD  HL, (sample_offset)
     SET 7, H    ;set bit 15 in playback_ptr
-    LD  HL, playback_ptr
 
 load_sample:
     EXX ;swap register banks to swap memory banks   
@@ -88,15 +86,13 @@ load_sample:
 load_next_page:
     SET 7, H    ;set bit 15 in playback_ptr
                 ;HL should == 0x8000 if we're here
-    LD  (playback_ptr), HL
-
-    EXX 
+    EXX ;swap register banks to swap memory banks   
     INC B       ;increment bank
     
-    ;must EXX before calling this label
+    
+    ;must be in EXX before calling this label
 load_page_from_68k:
-
-    LD  A, B    ;move to accumulator
+    LD  A, B    ;move bank number to accumulator
     LD  HL, bank_reg     ;HL' = 0x6000
     
     ;LD A, (sample_bank+1)  ;get low byte
@@ -120,36 +116,29 @@ load_page_from_68k:
 
     ;trash the high bit - we're not using it
     LD (HL), 0     ;a23
-    
-    ;in first byte
-    ;LD (HL), 1  ;a15
-    ;LD (HL), 0  ;a16
-    ;LD (HL), 0
-    ;LD (HL), 0
-    ;LD (HL), 0
-    ;LD (HL), 0
-    ;LD (HL), 0
-    ;LD (HL), 0  
-    
-    ;in second byte
-    ;LD (HL), 0  ;a23
-    
     EXX     ;restore from first EXX in this section
     
     
-    
 playback_setup:
-    
     LD  (IX), 0x2A      ;select DAC register
+    
 playback_loop:
-
     LD  A, 0x03         ;magic number for slowing
                         ;down the PCM driver
-                        ;TODO - add math to this comment
+                        ;see timing spreadsheet for more details
                         
-                        ;3      ~ 22kHz
-                        ;7/8    ~  8kHz
+                        ;1  -> 27   kHz
+                        ;2  -> 24   kHz
+                        ;3  -> 21.5 kHz
                         
+                        ;6  -> 16.8 kHz
+                        ;7  -> 15.6 kHz
+                        
+                        ;12 -> 11.6 kHz
+                        ;13 -> 11.0 kHz
+                        
+                        ;20 -> 8.2  kHz
+                        ;21 -> 7.9  kHz
 timing_adjust:
     DEC A
     JR  nz, timing_adjust
@@ -160,7 +149,7 @@ timing_adjust:
     ;compare A to the byte at address HL, 
     ;   increment HL, decrement BC
     ;if byte == 0xFF (the value stored in A),
-    ;   branch to setup
+    ;   we're done with this sample
     LD  A, 0xFF
     CPI 
     JR  z, sample_finished
@@ -180,8 +169,6 @@ timing_adjust:
     
 sample_finished:
     ;mute DAC, then enter paused state
-    LD (IX+1), 0x80     ;"zero" amplitude
-    LD (IX+1), 0x80     ;"zero" amplitude
     LD (IX+1), 0x80     ;"zero" amplitude
 
     LD  A, 0x00
