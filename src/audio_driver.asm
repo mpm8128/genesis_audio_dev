@@ -82,25 +82,12 @@ audio_driver:
 handle_all_fm_start:
     M_request_Z80_bus
     
-    ;disable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x00, d1    ;disable it
-    jsr write_register_opn2_ctrl    ;write to chip
     rts
     
 ;============================================================================
 ;   unpauses the z80 and sets up the 2612 for DAC writes
 ;============================================================================
 handle_all_fm_end:
-    ;re-enable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x80, d1    ;enable it
-    jsr write_register_opn2_ctrl    ;write to chip
-
-    ;set address to DAC so the z80 doesn't have to
-    move.b  #0x2A, d0        ;DAC data register
-    jsr set_address_opn2    ;write to chip
-
     ;unpause the z80
     M_return_Z80_bus
     rts
@@ -119,10 +106,36 @@ handle_all_fm_channels:
     btst  #0, ch_channel_flags(a5)  ;if channel is disabled
     beq @next_channel               ;   skip it
                                     ;else
+                                    
+    M_split_by_channel_type @ignore, &
+                            @ignore, &
+                            @temp_disable_dac, &
+                            @ignore
+    @temp_disable_dac:
+    ;disable DAC
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x00, d1    ;disable it
+    jsr write_register_opn2_ctrl    ;write to chip
+    @ignore:
+    
     jsr handle_stream               ;   handle stream events
     jsr handle_vibrato
     jsr handle_pitchbend            ;   handle pitchbend
     ;jsr envelopes                  ;   handle any active envelopes
+    
+    M_split_by_channel_type @ignore2, @ignore2, @dac2, @ignore2
+    @dac2:
+    ;re-enable DAC
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x80, d1    ;enable it
+    jsr write_register_opn2_ctrl    ;write to chip
+
+    ;set address to DAC so the z80 doesn't have to
+    move.b  #0x2A, d0        ;DAC data register
+    jsr set_address_opn2    ;write to chip
+
+    @ignore2:
+    
     jsr fm_driver_write_to_chip
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
@@ -198,6 +211,7 @@ stream_jumptable:
     dc.l    stream_vibrato
     dc.l    stream_send_z80_signal
     dc.l    stream_send_z80_address
+    dc.l    stream_struct_write
     
 ;==============================================================
 ;   stream_load_first_section
@@ -221,6 +235,22 @@ stream_load_first_section:
     moveq   #0, d0
     move.w  d0, ch_sequence_idx(a5) 
     move.l  a4, ch_stream_ptr(a5)
+    bra read_stream
+
+
+;==============================================================
+;   stream_struct_write
+;
+;parameters:
+;   a4 - stream pointer
+;       b   offset in channel struct
+;       b   data to write
+;==============================================================
+stream_struct_write:
+    move.b  (a4)+, d0   ;get offset
+    andi.w  #0xFF, d0    ;mask to 1 byte
+    move.b  (a4)+, d1
+    move.b  d1, (a5, d0.w)
     bra read_stream
 
 
@@ -970,6 +1000,7 @@ sc_pitchbend    rs.b        1
 sc_vibrato      rs.b        1
 sc_signal_z80   rs.b        1
 sc_sample_addr  rs.b        1
+sc_struct_write rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================

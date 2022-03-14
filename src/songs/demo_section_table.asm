@@ -63,12 +63,12 @@ demo_section_table:
     M_load_inst Inst_DAC
     dc.b    sc_sample_addr
     dc.l    test_sample_addr
+    dc.b    sc_struct_write, ch_channel_flags, 0x09
     dc.b    sc_signal_z80, 0x01 ;send "play" signal
     dc.b    sc_end_section
     
 @test_dac:    
     dc.b    sc_hold, 0xFF
-    dc.b    sc_stop
     dc.b    sc_end_section
     
     
