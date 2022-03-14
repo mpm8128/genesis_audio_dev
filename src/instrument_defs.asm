@@ -51,6 +51,19 @@
 
 size_instrument_data    equ (size_operator_data*4) + 2   
  
+ 
+Inst_DAC:
+    ;       op1   op2   op3   op4
+    dc.b    0x00, 0x00, 0x00, 0x00, &   ;det_mul
+            0x00, 0x00, 0x00, 0x00, &   ;tl
+            0x00, 0x00, 0x00, 0x00, &   ;rs_ar
+            0x00, 0x00, 0x00, 0x00, &   ;am_d1r
+            0x00, 0x00, 0x00, 0x00, &   ;d2r
+            0x00, 0x00, 0x00, 0x00, &   ;sl_rr
+            0x00, &                     ;fb_alg
+            0xC0                        ;lr_amfm
+
+ 
 Inst_test_organ_0:
     ;       op1   op2   op3   op4 
     dc.b    0x22, 0x33, 0x54, 0x61, &   ;det_mul

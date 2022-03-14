@@ -77,8 +77,8 @@ handle_all_fm_start:
     M_request_Z80_bus
     
     ;disable DAC
-    move.b  0x2B, d0    ;DAC enable register
-    move.b  0x00, d1    ;disable it
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x00, d1    ;disable it
     jsr write_register_opn2_ctrl    ;write to chip
     rts
     
@@ -88,12 +88,12 @@ handle_all_fm_start:
 ;============================================================================
 handle_all_fm_end:
     ;re-enable DAC
-    move.b  0x2B, d0    ;DAC enable register
-    move.b  0xFF, d1    ;enable it
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x80, d1    ;enable it
     jsr write_register_opn2_ctrl    ;write to chip
 
     ;set address to DAC so the z80 doesn't have to
-    move.b  0x2A, d0        ;DAC data register
+    move.b  #0x2A, d0        ;DAC data register
     jsr set_address_opn2    ;write to chip
 
     ;unpause the z80
@@ -1012,7 +1012,7 @@ silence_channel_table:
     dc.l    silence_fm  ;FM ch3
     dc.l    silence_fm  ;FM ch4
     dc.l    silence_fm  ;FM ch5
-    dc.l    silence_fm  ;FM ch6
+    dc.l    silence_dac_and_fm  ;FM ch6
     dc.l    silence_psg ;psg ch0
     dc.l    silence_psg ;psg ch1       
     dc.l    silence_psg ;psg ch2        
@@ -1021,7 +1021,12 @@ silence_channel_table:
 silence_section_table:
     dc.l    mute_fm
     dc.l    mute_psg
+    dc.l    mute_dac
     dc.l    stop_channel
+
+mute_dac:
+    dc.b    sc_signal_z80, 0x00 ; send "stop" signal
+    dc.b    sc_end_section
 
 mute_fm:
     dc.b    sc_keyoff
@@ -1038,11 +1043,14 @@ stop_channel:
     dc.b    sc_stop
     dc.b    sc_end_section
     
+
+silence_dac_and_fm:
+    dc.b    2
 silence_fm:
-    dc.b    0, -1, 0
+    dc.b    0, 3, -1, 0
     
 silence_psg:
-    dc.b    1, -1, 0
+    dc.b    1, 3, -1, 0
     
     even
 ;================================================

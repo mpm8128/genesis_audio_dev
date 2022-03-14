@@ -77,7 +77,9 @@ setup_poweron:
 Z80_RAM_start   equ $00A00000
 Z80_bus_req     equ $00A11100
 Z80_reset       equ $00A11200
-Z80_driver_length equ 0x187A
+;Z80_driver_length equ 0x187A
+Z80_driver_length equ z80_driver_end-z80_driver_start
+;Z80_driver_length equ 0
 
 init_z80:
     move.w  #$0,   (Z80_reset)      ;reset the z80    
@@ -87,16 +89,16 @@ init_z80:
     ;copy z80 code to the z80
     LEA     Z80_RAM_start, a0
     LEA     z80_driver_start, a1      ;a0 = pointer to z80 code on ROM
-    move.l  #z80_driver_end-z80_driver_start-1, d7
+    move.w  #Z80_driver_length-1, d7
 @loop_copy_to_z80:
     move.b  (a1)+, (a0)+
     dbf     d7, @loop_copy_to_z80
     
     move.w  #$0, (Z80_reset)        ;assert reset again
     ;cycle count
-    move.w  0x20, d7                ;wait for z80 to be ready
+    move.w  0x200, d7                ;wait for z80 to be ready
 @cycle_count:
-    dbf     d0, @cycle_count
+    dbf     d7, @cycle_count
     
     move.w  #$100,  (Z80_reset)      ;release reset    
     move.w  #$0,    (Z80_bus_req)    ;release bus    
@@ -279,5 +281,10 @@ VDP_LoadRegisters:
     include 'controller_driver.asm'
     include 'sound_test.asm'
     include 'tile_printing.asm'
+    
+;    org 0x08000
+test_sample_addr:
+    incbin 'songs/test.wav';,0x290 ;start address
+    
 ; A label defining the end of ROM so we can compute the total size.
 ROM_End:

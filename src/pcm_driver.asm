@@ -40,18 +40,30 @@ pause_dac:
     LD  A, (mailbox)     ;get value in mailbox
     OR  A                ;   set status register
     JR  z, pause_dac     ;if zero, keep waiting
-    JR  playback_setup   ;else do some playback
+    ;JR  playback_setup   ;else do some playback
     
+    JR  load_page_from_68k   ;else do some playback
     
     
 playback_ptr:
-    defw 0x500
+    defw 0x8000
 
     org 0020h
 mailbox:
     defb 0x00
+    defb 0x00
+    defb 0x00
+    defb 0x00
+sample_addr:
+sample_bank:
+    defw 0x0000
+sample_offset:
+    defw 0x0000
+   
    
 opn2_ctrl   equ 0x4000
+bank_reg    equ 0x6000
+bank_start  equ 0x8000
     
 ;    org 0038h
 ;reset_38:
@@ -60,17 +72,63 @@ opn2_ctrl   equ 0x4000
 ;    EI
 ;    RETI
 
-    org 0030h
+    org 0x0040
+load_page_from_68k:
+    EXX     ;probably don't need to do this
+    
+    LD HL, bank_reg     ;HL' = 0x6000
+    
+    ;LD A, (sample_bank+1)  ;get low byte
+    ;   8 times
+    ;LD (HL), A     ;a15
+    ;RRA
+    ;LD (HL), A     ;a16
+    ;RRA
+    ;LD (HL), A     ;a17
+    ;RRA
+    ;LD (HL), A     ;a18
+    ;RRA
+    ;LD (HL), A     ;a19
+    ;RRA
+    ;LD (HL), A     ;a20
+    ;RRA
+    ;LD (HL), A     ;a21
+    ;RRA
+    ;LD (HL), A     ;a22
+    ;RRA
+
+    ;LD A, (sample_bank)    ;get high byte
+    ;LD (HL), A     ;a23
+    
+    ;in first byte
+    LD (HL), 1  ;a15
+    LD (HL), 0  ;a16
+    LD (HL), 0
+    LD (HL), 0
+    LD (HL), 0
+    LD (HL), 0
+    LD (HL), 0
+    LD (HL), 0  
+    
+    ;in second byte
+    LD (HL), 0  ;a23
+    
+    EXX     ;restore from first EXX in this section
+    
 playback_setup:
-    ;load playback_ptr into a register
-    LD  HL, test_wav
+    ;load playback_ptr into a HL
+    LD  HL, bank_start  ;HL = 0x8000
+    
     LD  (IX), 0x2A      ;select DAC register
 playback_loop:
 
-    ;LD  A, 0x01
-;timing_adjust:
-;    INC A
-;    JR  z, timing_adjust
+    LD  A, 0x08         ;magic number for slowing
+                        ;down the PCM driver
+                        ;TODO - add math to this comment
+                        ;approximately 8khz
+timing_adjust:
+    DEC A
+    JR  nz, timing_adjust
     
     LD  E, (HL)     ;get current byte
     LD (IX+1), E    ;write data
@@ -86,7 +144,7 @@ playback_loop:
     ;check mailbox every cycle
     LD  A, (mailbox)     ;get value in mailbox
     OR  A                ;   set status register
-    JR  z, pause_dac     ;if zero, keep waiting
+    JR  z, pause_dac     ;if zero, wait until nonzero
     
     ;else keep playing
     JR playback_loop
@@ -96,6 +154,3 @@ sample_finished:
     LD  (mailbox), A    ;write "done" to the mailbox
     JR  pause_dac       ;wait for instructions
     
-    org 500h
-test_wav:
-    incbin  "songs/test.wav"
