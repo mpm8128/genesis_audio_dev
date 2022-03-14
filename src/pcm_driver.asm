@@ -40,92 +40,116 @@ pause_dac:
     LD  A, (mailbox)     ;get value in mailbox
     OR  A                ;   set status register
     JR  z, pause_dac     ;if zero, keep waiting
-    ;JR  playback_setup   ;else do some playback
+    JP  play_dac
     
-    JR  load_page_from_68k   ;else do some playback
-    
-    
-playback_ptr:
-    defw 0x8000
 
+ 
     org 0020h
 mailbox:
-    defb 0x00
-    defb 0x00
-    defb 0x00
-    defb 0x00
-sample_addr:
+    defb 0x00   ;[0]
+    defb 0x00   ;[1]
+    defb 0x00   ;[2]
+    defb 0x00   ;[3]
+
 sample_bank:
-    defw 0x0000
+    defb 0x00   ;[0]
+    defb 0x00
 sample_offset:
     defw 0x0000
-   
+playback_ptr:
+    defw 0x0000   
    
 opn2_ctrl   equ 0x4000
 bank_reg    equ 0x6000
 bank_start  equ 0x8000
     
-;    org 0038h
-;reset_38:
-;vblank_isr:
-;    DI
-;    EI
-;    RETI
-
     org 0x0040
-load_page_from_68k:
-    EXX     ;probably don't need to do this
+    ;received "play" signal
+play_dac:    
+    ;copy starting sample offset to playback ptr
+
+    ;LD  (playback_ptr), DE
+
+    LD  HL, (sample_offset)
+    SET 7, H    ;set bit 15 in playback_ptr
+    LD  HL, playback_ptr
+
+load_sample:
+    EXX ;swap register banks to swap memory banks   
     
-    LD HL, bank_reg     ;HL' = 0x6000
+    ;get current bank# into B
+    LD  A, (sample_bank)
+    LD  B, A    
+    
+    JR  load_page_from_68k  ;else go load our sample
+                            ;and start playback
+
+
+load_next_page:
+    SET 7, H    ;set bit 15 in playback_ptr
+                ;HL should == 0x8000 if we're here
+    LD  (playback_ptr), HL
+
+    EXX 
+    INC B       ;increment bank
+    
+    ;must EXX before calling this label
+load_page_from_68k:
+
+    LD  A, B    ;move to accumulator
+    LD  HL, bank_reg     ;HL' = 0x6000
     
     ;LD A, (sample_bank+1)  ;get low byte
     ;   8 times
-    ;LD (HL), A     ;a15
-    ;RRA
-    ;LD (HL), A     ;a16
-    ;RRA
-    ;LD (HL), A     ;a17
-    ;RRA
-    ;LD (HL), A     ;a18
-    ;RRA
-    ;LD (HL), A     ;a19
-    ;RRA
-    ;LD (HL), A     ;a20
-    ;RRA
-    ;LD (HL), A     ;a21
-    ;RRA
-    ;LD (HL), A     ;a22
-    ;RRA
+    LD (HL), A     ;a15
+    RRA
+    LD (HL), A     ;a16
+    RRA
+    LD (HL), A     ;a17
+    RRA
+    LD (HL), A     ;a18
+    RRA
+    LD (HL), A     ;a19
+    RRA
+    LD (HL), A     ;a20
+    RRA
+    LD (HL), A     ;a21
+    RRA
+    LD (HL), A     ;a22
+    RRA
 
-    ;LD A, (sample_bank)    ;get high byte
-    ;LD (HL), A     ;a23
+    ;trash the high bit - we're not using it
+    LD (HL), 0     ;a23
     
     ;in first byte
-    LD (HL), 1  ;a15
-    LD (HL), 0  ;a16
-    LD (HL), 0
-    LD (HL), 0
-    LD (HL), 0
-    LD (HL), 0
-    LD (HL), 0
-    LD (HL), 0  
+    ;LD (HL), 1  ;a15
+    ;LD (HL), 0  ;a16
+    ;LD (HL), 0
+    ;LD (HL), 0
+    ;LD (HL), 0
+    ;LD (HL), 0
+    ;LD (HL), 0
+    ;LD (HL), 0  
     
     ;in second byte
-    LD (HL), 0  ;a23
+    ;LD (HL), 0  ;a23
     
     EXX     ;restore from first EXX in this section
     
+    
+    
 playback_setup:
-    ;load playback_ptr into a HL
-    LD  HL, bank_start  ;HL = 0x8000
     
     LD  (IX), 0x2A      ;select DAC register
 playback_loop:
 
-    LD  A, 0x08         ;magic number for slowing
+    LD  A, 0x03         ;magic number for slowing
                         ;down the PCM driver
                         ;TODO - add math to this comment
-                        ;approximately 8khz
+                        
+                        ;3      ~ 22kHz
+                        ;7/8    ~  8kHz
+                        
 timing_adjust:
     DEC A
     JR  nz, timing_adjust
@@ -141,16 +165,26 @@ timing_adjust:
     CPI 
     JR  z, sample_finished
     
+    ;check overflow every cycle
+    BIT 7, H                ;overflow check
+    JP  z, load_next_page   ;if we overflowed, load next page
+
     ;check mailbox every cycle
     LD  A, (mailbox)     ;get value in mailbox
     OR  A                ;   set status register
-    JR  z, pause_dac     ;if zero, wait until nonzero
+    JP  z, pause_dac     ;if zero, wait until nonzero
     
     ;else keep playing
-    JR playback_loop
+    JP playback_loop
+    
     
 sample_finished:
+    ;mute DAC, then enter paused state
+    LD (IX+1), 0x80     ;"zero" amplitude
+    LD (IX+1), 0x80     ;"zero" amplitude
+    LD (IX+1), 0x80     ;"zero" amplitude
+
     LD  A, 0x00
     LD  (mailbox), A    ;write "done" to the mailbox
-    JR  pause_dac       ;wait for instructions
+    JP  pause_dac       ;wait for instructions
     

@@ -61,11 +61,12 @@ demo_section_table:
     
 @setup_dac:
     M_load_inst Inst_DAC
-    ;dc.b    sc_reg_write, 0x2B, 0x80    ;enable DAC
+    dc.b    sc_sample_addr
+    dc.l    test_sample_addr
+    dc.b    sc_signal_z80, 0x01 ;send "play" signal
     dc.b    sc_end_section
     
 @test_dac:    
-    dc.b    sc_signal_z80, 0x01 ;send "play" signal
     dc.b    sc_hold, 0xFF
     dc.b    sc_end_section
     

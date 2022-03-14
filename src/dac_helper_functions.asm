@@ -37,12 +37,15 @@ dac_send_sample_address:
     ;calculate bank number and write to z80
     lsl.l   #1, d0  ;move bit 15 into upper word
     swap    d0      ;swap upper/lower words
-    andi.w  #0x01FF, d0  ;mask bottom 9 bits (15-23 of original address)
+    andi.w  #0xFF, d0  ;mask bottom 8 bits (15-22 of original address)
     move.w  d0, (z80_sample_bank)
     
     ;mask off offset and write to z80
-    ;andi.w  0x7FFF, d1 ;mask off bit 15
-    bset    #15, d1     ;set bit 15 so we don't have to on the z80
+    andi.w  #0x7FFF, d1  ;mask off bit 15
+                        ;we have to set this on the z80
+                        ;   when we switch banks anyway
+                        ;   so there's no point in setting
+                        ;   it here
     move.w  d1, (z80_sample_offset)
     
     rts

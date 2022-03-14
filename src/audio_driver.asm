@@ -47,7 +47,14 @@ M_split_by_channel_type: macro psg_fn, fm_fn, dac_fn, q_fn
     bra \q_fn
     endm
     
-
+M_word_align_stream: macro
+    move.w  a4, d6              ;copy address to d6 to compare
+    btst    #0, d6              ;check if stream ptr is odd or even
+    beq     @word_aligned\@       ;
+    tst.b   (a4)+               ;align that bad boy
+@word_aligned\@
+    endm
+    
 ;============================================================================
 ;   Entry point -> audio_driver
 ;============================================================================
@@ -61,7 +68,6 @@ audio_driver:
     jsr handle_all_psg_channels     ;all psg channels
 
     rts
-    
     
 ;============================================================================
 ;   handle dac
@@ -82,7 +88,6 @@ handle_all_fm_start:
     jsr write_register_opn2_ctrl    ;write to chip
     rts
     
-
 ;============================================================================
 ;   unpauses the z80 and sets up the 2612 for DAC writes
 ;============================================================================
@@ -100,8 +105,6 @@ handle_all_fm_end:
     M_return_Z80_bus
     rts
 
-
-    
 ;============================================================================
 ;   handle_all_fm_channels
 ;============================================================================
@@ -194,6 +197,7 @@ stream_jumptable:
     dc.l    stream_pitchbend
     dc.l    stream_vibrato
     dc.l    stream_send_z80_signal
+    dc.l    stream_send_z80_address
     
 ;==============================================================
 ;   stream_load_first_section
@@ -232,6 +236,19 @@ stream_send_z80_signal:
     jsr dac_send_signal_code
     bra read_stream
 
+
+;==============================================================
+;   stream_send_z80_address
+;
+;parameters:
+;   a4 - stream pointer
+;       l   address to send to z80
+;==============================================================
+stream_send_z80_address:
+    M_word_align_stream
+    move.l  (a4)+, d0
+    jsr dac_send_sample_address
+    bra read_stream
 
 ;==============================================================
 ;   stream_end_section
@@ -952,6 +969,7 @@ sc_end_section  rs.b        1
 sc_pitchbend    rs.b        1
 sc_vibrato      rs.b        1
 sc_signal_z80   rs.b        1
+sc_sample_addr  rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
