@@ -214,6 +214,25 @@ stream_jumptable:
     dc.l    stream_struct_write
     
 ;==============================================================
+;   stream codes
+;==============================================================
+    RSRESET
+sc_stop         rs.b        1
+sc_loop         rs.b        1
+sc_keyon        rs.b        1
+sc_keyoff       rs.b        1
+sc_load_inst    rs.b        1
+sc_reg_write    rs.b        1
+sc_hold         rs.b        1
+sc_end_section  rs.b        1
+sc_pitchbend    rs.b        1
+sc_vibrato      rs.b        1
+sc_signal_z80   rs.b        1
+sc_sample_addr  rs.b        1
+sc_struct_write rs.b        1
+num_sc          rs.b        0
+    
+;==============================================================
 ;   stream_load_first_section
 ;
 ;   special code for loading the first section
@@ -609,7 +628,6 @@ stream_pitchbend:
 ;       b - depth (max deviation from base value)
 ;==============================================================
 stream_vibrato:
-    ;move.b  (a4)+, ch_vibrato_speed(a5)
     move.b  (a4)+, d0   ;vibrato speed
     move.b  d0, ch_vibrato_speed(a5)
     move.b  d0, ch_vibrato_counter(a5)  ;reset counter
@@ -669,7 +687,7 @@ handle_pitchbend:
 @clip_psg_freq
 ;@check max freq
     cmp.w   #max_psg_freq, d1       ;
-    blt     @psg_check_min_freq         ;
+    blt     @psg_check_min_freq     ;
     move.w  #max_psg_freq, d1       ;clip
     bra     @writeback_to_struct    ;
 @psg_check_min_freq:
@@ -681,7 +699,7 @@ handle_pitchbend:
 @clip_fm_freq
 ;@check max freq
     cmp.w   #max_fm_freq, d1        ;
-    blt     @fm_check_min_freq         ;
+    blt     @fm_check_min_freq      ;
     move.w  #max_fm_freq, d1        ;clip
     bra     @writeback_to_struct    ;
 @fm_check_min_freq:
@@ -714,71 +732,6 @@ handle_pitchbend:
 bad_stream_code:
     M_disable_interrupts
     bra     bad_stream_code
-
-
-
-    
-;==============================================================
-;   handle_psg_automation
-;       gets called after stream handling, per channel
-;   xYZx LPTV
-;   bit 0 - "V" - vibrato enable
-;   bit 1 - "T" - tremelo enable
-;   bit 2 - "P" - pitch envelope enable
-;   bit 3 - "L" - volume envelope enable
-;   bit 4 - unused
-;   bit 5 - "Z" - pitch envelope mode (0 - one-shot, 1 - loop)
-;   bit 6 - "Y" - volume envelope mode (0 - one-shot, 1 - loop)
-;   bit 7 - unused
-;==============================================================
-; handle_psg_automation:
-    ; move.b  psg_ch_auto_flags(a5), d6   ;d6 = auto flags
-    ; btst    #0, d6              ;check if vibrato is enabled
-    ; beq     @skip_vibrato       ;if not, skip it
-    ; ;jsr     handle_vibrato
-; @skip_vibrato:
-
-    ; btst    #1, d6
-    ; beq     @skip_tremelo
-    ; ;jsr    handle_tremelo
-; @skip_tremelo:
-
-    ; btst    #2, d6
-    ; beq     @skip_pitch_envelope
-    ; ;jsr    handle_pitch_envelope
-; @skip_pitch_envelope
-
-    ; btst    #3, d6
-    ; beq     @skip_vol_envelope
-    ; jsr     handle_vol_envelope
-; @skip_vol_envelope:
-    ; rts
-    
-    ; ;;
-; handle_vol_envelope:
-    ; move.w  psg_ch_vol_auto_idx(a5), d5     ;d5 = idx
-    ; move.l  psg_ch_vol_auto_ptr(a5), a4     ;a4 = envelope
-    ; move.b  (a4, d5.w), d1                  ;d1 = envelope[idx]
-    ; move.b  psg_ch_channel(a5), d0
-    ; jsr     PSG_SetVolume
-    
-    ; addi.w  #1, d5                          ;increment idx
-    ; move.w  psg_ch_vol_auto_len(a5), d4
-    ; cmp.w   d4, d5     
-    ; blt     @cleanup
-    
-    ; btst    #6, d6
-    ; bne     @loop_envelope
-    ; ;else
-    ; subi.w  #1, d5
-    ; bra     @cleanup
-; @loop_envelope
-    ; ;move.w  psg_ch_vol_auto_len(a5), d6
-    ; moveq   #0, d5
-    
-; @cleanup:
-    ; move.w  d5, psg_ch_vol_auto_idx(a5)
-    ; rts
     
 ;==============================================================
 ;   handle psg adsr
@@ -984,24 +937,6 @@ fm_driver_write_to_chip:
     move.b  d5, ch_inst_flags(a5)
     rts
     
-;==============================================================
-;   stream codes
-;==============================================================
-    RSRESET
-sc_stop         rs.b        1
-sc_loop         rs.b        1
-sc_keyon        rs.b        1
-sc_keyoff       rs.b        1
-sc_load_inst    rs.b        1
-sc_reg_write    rs.b        1
-sc_hold         rs.b        1
-sc_end_section  rs.b        1
-sc_pitchbend    rs.b        1
-sc_vibrato      rs.b        1
-sc_signal_z80   rs.b        1
-sc_sample_addr  rs.b        1
-sc_struct_write rs.b        1
-num_sc          rs.b        0
     
 ;==============================================================
 ;   note codes
@@ -1025,9 +960,10 @@ note_As     rs.b    0
 note_Bb     rs.b    1
 note_B      rs.b    1    
     
-    include 'channel_structs.asm'
-    ;include 'refactored_ch_structs.asm'
+    
 ;================================================
+    include 'channel_structs.asm'
+    
 song_record_size        equ     2
 song_record_size_bytes  equ     (song_record_size*size_long)
 

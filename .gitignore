@@ -1,7 +1,17 @@
 #gitignore
 
+tools/zmac.exe
 tools/asm68k.exe
-build/out.*
-build/errors.txt
+build/*
+zout/*
 *.lnk
 test/*
+*.wav
+*.jpg
+*.png
+*.mid
+*.y12
+tools/*/*.txt
+tools/*/*.7z
+tools/*/*.zip
+docs/

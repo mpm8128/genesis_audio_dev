@@ -1,23 +1,5 @@
 ;z80 PCM driver
 
-;write to OPN2 register 2A (8-bit data) 
-;                   and 2B (dac enable, bit 7)
-
-
-
-;pseudocode
-
-;get pointer to wav sample to play
-
-;get playback rate, convert to "cycles to wait"
-
-;write sample to OPN2 (fixed number of cycles?)
-;   register 2A
-
-;fetch next byte - stop if 0xFF
-
-;wait remaining cycles to play next sample
-
     .z80
     org 0000h
     
@@ -55,12 +37,8 @@ sample_bank:
     defb 0x00   ;[24]
     defb 0x00   ;[25]
     
-    
-    org 0026h
 sample_offset:  ;[26/27]
     defw 0x0000
-;playback_ptr:   ;[28/29]
-;    defw 0x0000   
    
 opn2_ctrl   equ 0x4000
 bank_reg    equ 0x6000
@@ -95,7 +73,6 @@ load_page_from_68k:
     LD  A, B    ;move bank number to accumulator
     LD  HL, bank_reg     ;HL' = 0x6000
     
-    ;LD A, (sample_bank+1)  ;get low byte
     ;   8 times
     LD (HL), A     ;a15
     RRA
