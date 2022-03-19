@@ -7,16 +7,21 @@
 demo_channel_table:
     ;dc.l    demo_fm_vibrato_seq_table
     ;dc.l    demo_ch0_seq_table
-    dc.l    0
+    dc.l    demo_auto_seq_table
     dc.l    0
     dc.l    0
     
     dc.l    0
     dc.l    0
-    dc.l    demo_dac_seq_table
+    ;dc.l    demo_dac_seq_table
     
     ;dc.l    demo_psg0_seq_table
     ;dc.l    demo_psg0_seq_table
+    dc.l    0
+    dc.l    0
+    dc.l    0
+    dc.l    0
+    dc.l    0
     dc.l    0
     dc.l    0
     dc.l    0
@@ -25,6 +30,10 @@ demo_channel_table:
 
 ;===================
 ;   Sequence Tables
+demo_auto_seq_table:
+    dc.b    6, 7
+    dc.b    -1, 1
+
 demo_ch0_seq_table:
     dc.b    0, 2
     dc.b    seq_table_stop_code
@@ -58,6 +67,41 @@ demo_section_table:
     dc.l    @test_vibrato_3
     dc.l    @setup_dac
     dc.l    @test_dac
+    dc.l    @setup_auto_6
+    dc.l    @run_auto_7
+    
+@setup_auto_6:
+    M_load_inst Inst_horn_1
+    dc.b    sc_set_auto
+    dc.b        0xC0    ;enable, reg, data
+    dc.b        0x40    ;FB/alg
+    dc.b        0x02    ;every 6 frames
+    dc.b        0x00    ;index at 0
+    dc.l        0       ;no extra data
+    dc.l        @demo_auto_data
+    dc.b    sc_end_section
+    
+@demo_auto_data:
+    dc.b    0x77, 0x09, 0x0f, 0x44, 0xFF
+    
+@run_auto_7:
+    M_play_note note_G,     3, 16
+    M_play_note note_A,     3, 16
+    M_play_note note_Bb,    3, 16
+    M_play_note note_G,     3, 16
+    M_play_note note_Bb,    3, 16
+    M_play_note note_C,     4, 16
+    M_play_note note_Db,    4, 16
+    M_play_note note_G,     3, 16
+    M_play_note note_G,     3, 16
+    M_play_note note_A,     3, 16
+    M_play_note note_Bb,    3, 16
+    M_play_note note_Db,    4, 16
+    M_play_note note_C,     4, 16
+    M_play_note note_Bb,    3, 16
+    M_play_note note_G,     3, 16
+    M_play_note note_F,     3, 16
+    dc.b    sc_end_section
     
 @setup_dac:
     M_load_inst Inst_DAC

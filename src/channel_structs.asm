@@ -38,7 +38,7 @@ ch_sequence_ptr         rs.l    1   ;pointer to sequence table
 ch_inst_ptr             rs.l    1   ;pointer to instrument data on ROM
 
 ch_inst_flags           rs.b    1   
-    ;xKOP xSaa
+    ;xKOP ASaa
     ;bits 0-1: "aa" - envelope bits
     ;   00 = attack
     ;   01 = decay
@@ -46,7 +46,7 @@ ch_inst_flags           rs.b    1
     ;   11 = release
     ;bit 2 - status bit - set to 0 while note is playing
     ;   gets set to 1 after release fades to zero
-    ;bit 3 - unused
+    ;bit 3 - "A" - automation update - 1 if auto params changed
     ;bit 4 - "P" - pitch update   - 1 if new pitch
     ;bit 5 - "O" - keyoff - set to 1 if we just 
     ;   got a keyoff event from the stream. This
@@ -95,6 +95,43 @@ ch_attack_scaling       rs.b    1   ;attack scaling (1-255)
 ch_decay_scaling        rs.b    1   ;decay scaling (1-255)
 ch_release_scaling      rs.b    1   ;release scaling (1-255)
 ch_adsr_counter         rs.b    1   ;counter for scaling > 1
+;-----------------------
+;Parameter Automation
+ch_automation_flags     rs.b    1   
+    ;ELxx xxxT
+    ;bit 0 - "T" - automation type
+    ;   0 - fixed data
+    ;   1 - function
+    ;bit 1
+    ;bit 2
+    ;bit 3
+    ;bit 4
+    ;bit 5
+    ;bit 6 - "L" - location
+    ;   0 - channel struct parameter
+    ;   1 - synth register parameter
+    ;bit 7 - "E" - automation enable bit.
+    ;   0 - automation disabled
+    ;   1 - automation enabled
+    
+ch_automation_param     rs.b    1   ;offset into struct or register address
+                                    ; this is the parameter being automated
+
+ch_automation_rate      rs.b    1   ;number of frames to wait before
+                                    ;   advancing the counter
+
+ch_automation_counter   rs.b    1   ;counter for rate
+
+ch_automation_index     rs.b    1   ;index into fn/data
+
+ch_automation_value     rs.b    1   ;save current value of data/fn for delayed 
+                                    ;chip writes
+
+ch_automation_extra     rs.l    1   ;4 bytes of extra space for one-off params
+                                    ;   null this if unused
+                                    
+ch_automation_pointer   rs.l    1   ;pointer to function or fixed data
+
 
 ;-----------------------
 ;Software Pitch Envelope

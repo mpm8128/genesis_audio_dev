@@ -121,8 +121,9 @@ handle_all_fm_channels:
     jsr handle_stream               ;   handle stream events
     jsr handle_vibrato
     jsr handle_pitchbend            ;   handle pitchbend
-    ;jsr envelopes                  ;   handle any active envelopes
-    
+    jsr handle_automation           
+    jsr fm_driver_write_to_chip
+
     M_split_by_channel_type @ignore2, @ignore2, @dac2, @ignore2
     @dac2:
     ;re-enable DAC
@@ -136,7 +137,6 @@ handle_all_fm_channels:
 
     @ignore2:
     
-    jsr fm_driver_write_to_chip
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
@@ -212,6 +212,7 @@ stream_jumptable:
     dc.l    stream_send_z80_signal
     dc.l    stream_send_z80_address
     dc.l    stream_struct_write
+    dc.l    stream_set_auto
     
 ;==============================================================
 ;   stream codes
@@ -230,6 +231,7 @@ sc_vibrato      rs.b        1
 sc_signal_z80   rs.b        1
 sc_sample_addr  rs.b        1
 sc_struct_write rs.b        1
+sc_set_auto     rs.b        1
 num_sc          rs.b        0
     
 ;==============================================================
@@ -254,6 +256,37 @@ stream_load_first_section:
     moveq   #0, d0
     move.w  d0, ch_sequence_idx(a5) 
     move.l  a4, ch_stream_ptr(a5)
+    bra read_stream
+
+
+
+;==============================================================
+;   stream_set_auto
+;
+;   sets up automation data in the channel struct.
+;       there's a lot of it. 
+;
+;   also zeroes out the counter and the value to write
+;
+;parameters:
+;   a4 - stream pointer
+;       b - auto flags
+;       b - ch offset/hw reg parameter
+;       b - rate    (frames to advance idx)
+;       b - index   (index into fn/data)
+;       l - extra params
+;       l - data/fn pointer
+;==============================================================
+stream_set_auto:
+    move.b  (a4)+, ch_automation_flags(a5)
+    move.b  (a4)+, ch_automation_param(a5)
+    move.b  (a4)+, ch_automation_rate(a5)
+    move.b  (a4)+, ch_automation_index(a5)
+    move.b  #0, ch_automation_value(a5)
+    move.b  #0, ch_automation_counter(a5)
+    M_word_align_stream
+    move.l  (a4)+, ch_automation_extra(a5)
+    move.l  (a4)+, ch_automation_pointer(a5)
     bra read_stream
 
 
@@ -843,6 +876,53 @@ handle_psg_adsr:
     rts
     
 ;==============================================================
+;   handle_automation
+;       a5 - ch struct
+;==============================================================
+handle_automation:
+    btst   #7, ch_automation_flags(a5)  ;check enable bit
+    beq    @just_return                 ;return early    
+    ;else
+    
+    tst.b   ch_automation_counter(a5)       ;check counter
+    ble     @handle_automation              ;if time to advance index, do that
+                                            ;   else
+    subi.b  #1, ch_automation_counter(a5)   ;decrement counter
+    bra     @just_return                    ;   and return
+    
+@handle_automation:
+    bset    #3, ch_inst_flags(a5)   ;set automation update flag
+    move.b  ch_automation_rate(a5), ch_automation_counter(a5)   ;reset counter
+    addi.b  #1, ch_automation_index(a5) ;increment index
+    move.l  ch_automation_pointer(a5), a3   ;save pointer to a3
+    
+    
+    btst    #0, ch_automation_flags(a5) ;check auto type
+    beq     @fixed_data
+    ;else 
+;@function:
+    jmp     (a3)    ;hard jump to auto fn
+                    ;fn sets ch_automation_value and returns
+    
+@fixed_data:
+    move.b  ch_automation_index(a5), d0 ;
+    move.b  (a3, d0), d1                ;d1 = next value
+    cmp.b   #0xFF, d1                   ;check for end of data
+    bne     @write_to_struct            ;not at end of data
+    ;else reset index to 0
+    move.b  #0x00, ch_automation_index(a5)
+    move.b  #0x00, d0
+    move.b  (a3, d0), d1                ;d1 = next value
+
+@write_to_struct
+    move.b  d1, ch_automation_value(a5) ;write to struct
+    
+    
+@just_return:
+    rts
+    
+    
+;==============================================================
 ;   handle_vibrato
 ;==============================================================
 handle_vibrato:
@@ -918,13 +998,36 @@ fm_driver_write_to_chip:
 
 @check_pitch_update:
     btst    #4, d5                  ;check pitch update flag
-    beq     @check_keyon
+    beq     @check_automation_update
     bclr    #4, d5                  ;clear pitch update flag
 
     move.b  ch_channel_num(a5), d2  ;d2 = channel
     move.w  ch_adj_freq(a5), d1     ;d1 = adjusted frequency
     move.b  ch_note_octave(a5), d0  ;d0 = octave (block)
     jsr set_FM_frequency            ;(channel (d0.b), counter (d1.w))
+    
+@check_automation_update:
+    btst    #3, d5                  ;check auto update flag
+    beq     @check_keyon
+    bclr    #3, d5                  ;clear auto update flag
+    
+    ;get parameter and value
+    move.b  ch_automation_param(a5), d0 ;d0 = param
+    andi.w  #0xFF, d0                   ;mask to byte
+    move.b  ch_automation_value(a5), d1 ;d1 = value
+    
+    btst    #6, ch_automation_flags(a5) ;check automation location
+    beq     @struct_param
+    ;else
+;@synth param
+    jsr write_register_opn2     ;write value (d1) to reg (d0)    
+    
+    bra @check_keyon
+    
+@struct_param:
+    move.b  d1, (a5, d0)
+    ;bra @check_keyon
+
     
 @check_keyon:
     btst    #6, d5          ;check keyon
