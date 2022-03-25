@@ -146,6 +146,18 @@ test_palette:
 ;==============================================================
     RSRESET
 tile_id_blank	rs.b    1
+
+tile_id_0       rs.b    1
+tile_id_1       rs.b    1
+tile_id_2       rs.b    1
+tile_id_3       rs.b    1
+tile_id_4       rs.b    1
+tile_id_5       rs.b    1
+tile_id_6       rs.b    1
+tile_id_7       rs.b    1
+tile_id_8       rs.b    1
+tile_id_9       rs.b    1
+
 tile_id_a       rs.b    1
 tile_id_b       rs.b    1
 tile_id_c       rs.b    1
@@ -172,17 +184,6 @@ tile_id_w       rs.b    1
 tile_id_x       rs.b    1
 tile_id_y       rs.b    1
 tile_id_z       rs.b    1
-
-tile_id_0       rs.b    1
-tile_id_1       rs.b    1
-tile_id_2       rs.b    1
-tile_id_3       rs.b    1
-tile_id_4       rs.b    1
-tile_id_5       rs.b    1
-tile_id_6       rs.b    1
-tile_id_7       rs.b    1
-tile_id_8       rs.b    1
-tile_id_9       rs.b    1
 
 tile_id_garb	rs.b    1
 tile_count		rs.b    0	; Last entry is just the count

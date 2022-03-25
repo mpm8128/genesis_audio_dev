@@ -125,7 +125,8 @@ demo_init:
     jsr Copy_Tiles_to_VRAM
     
     ;init sound test
-    move.b  #1, st_flag_display_changed
+    ;move.b  #1, st_flag_display_changed
+    ;move.w  2, debug
     
     rts
     
