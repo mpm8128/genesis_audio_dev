@@ -243,22 +243,22 @@ cza3_channel_table:
 ;=========================================================
 ;section table
 cza3_section_table
-    dc.l    @load_bass
-    dc.l    @bass_full_song
+    dc.l    @load_bass      ;0
+    dc.l    @bass_full_song ;1
 
-    dc.l    @load_lead
-    dc.l    @lead_full_song
+    dc.l    @load_lead      ;2
+    dc.l    @lead_full_song ;3
     
-    dc.l    @load_harm
-    dc.l    @harm1_full_song
-    dc.l    @harm2_full_song
+    dc.l    @load_harm      ;4
+    dc.l    @harm1_full_song;5
+    dc.l    @harm2_full_song;6
     
-    dc.l    @load_noise
-    dc.l    @noise_wave
+    dc.l    @load_noise     ;7
+    dc.l    @noise_wave     ;8
     
-    dc.l    @delay_6
-    dc.l    @load_psg_pluck
-    dc.l    @psg_rest_16m
+    dc.l    @delay_6        ;9
+    dc.l    @load_psg_pluck ;10
+    dc.l    @psg_rest_16m   ;11
     dc.l    @psg_a_12
     dc.l    @psg_a_13
     dc.l    @psg_a_14

@@ -86,8 +86,8 @@ sound_test_menu:
     move.w  #(num_songs-song_record_size_bytes), d2
     
 @check_up:
-    btst    0x0, d7
-    beq     @check_down:
+    btst    #pad_button_up, d7
+    beq     @check_down
     ;handle up
     M_mark_display_changed
     subi.w  #1, d1  ;decrement channel picker
@@ -95,8 +95,8 @@ sound_test_menu:
     moveq   #0, d1  ;clip to 0
     
 @check_down:
-    btst    0x1, d7
-    beq     @check_left:
+    btst    #pad_button_down, d7
+    beq     @check_left
     ;handle down
     M_mark_display_changed
     
@@ -162,7 +162,9 @@ st_digits   rs.w    num_st_digits
 
 @update_display:
     jsr @display_song_number
+    jsr @display_table_header
     jsr @display_fm_channel_data
+    jsr @display_psg_channel_data
 
     rts
     
@@ -175,6 +177,7 @@ st_digits   rs.w    num_st_digits
                                 ;d6/8 gives us the song's number
     lea     st_digits, a0
     moveq   #(num_st_digits-1), d7 ; loop counter
+
 
 ;convert binary to BCD
 @loop_BCD:    
@@ -210,109 +213,161 @@ st_digits   rs.w    num_st_digits
     dbf d7, @loop_write_number
  
     rts
-;-------------------------
-@display_fm_channel_data
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+5)*vdp_plane_width)+sound_test_xpos+0)*size_word)
-    move.w  #tile_id_1, d0
+    
+@display_table_header:
+    move.w  #tile_id_0, d0
     move.w  #tile_id_blank, d2
-    
-    move.w  #5, d7
-    
-    move.w  d2, vdp_data
-@write_channel_numbers_FM:
-    move.w  d2, vdp_data
-    move.w  d2, vdp_data
-    move.w  d2, vdp_data
-    move.w  d0, vdp_data
-    addi.w  #1, d0
-    dbf     d7, @write_channel_numbers_FM
 
-   
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+6)*vdp_plane_width)+sound_test_xpos+0)*size_word)
+    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+4)*vdp_plane_width)+sound_test_xpos+0)*size_word)
+
+
+    move.w  #tile_id_c, vdp_data
+    move.w  #tile_id_h, vdp_data
+    move.w  #tile_id_a, vdp_data
+    move.w  #tile_id_n, vdp_data
+    move.w  d2, vdp_data
+
     move.w  #tile_id_s, vdp_data
     move.w  #tile_id_e, vdp_data
     move.w  #tile_id_q, vdp_data
     move.w  d2, vdp_data
-    
-    move.w  #5, d3              ;loop counter
-    lea     ch_fm_1, a5
-    move.w  #tile_id_0, d0
-@write_sequence_indexes:
-    clr.l   d6
-    move.w  ch_sequence_idx(a5), d4
-    move.l  ch_sequence_ptr(a5), a4
-    
-    move.b  (a4, d4), d6    ;d6 = current entry of seq table
-    M_buffer_as_BCD    d6, 2
-    M_write_buffer_to_display 2
-    
-    move.w  d2, vdp_data
-    move.w  d2, vdp_data
-    adda.w  #fm_ch_size, a5
-    dbf d3, @write_sequence_indexes
 
-
-;freq reg  
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+7)*vdp_plane_width)+sound_test_xpos+0)*size_word)
     move.w  #tile_id_f, vdp_data
     move.w  #tile_id_q, vdp_data
     move.w  d2, vdp_data
-    move.w  d2, vdp_data
-
-    move.w  #5, d3              ;loop counter
-    lea     ch_fm_1, a5
-    move.w  #tile_id_0, d0
-@write_freq_reg:
-    clr.l   d6
-    move.w  ch_adj_freq(a5), d6
-    M_buffer_as_hex    d6, 3
-    M_write_buffer_to_display   3
-
-    move.w  d2, vdp_data
-    adda.w  #fm_ch_size, a5
-    dbf d3, @write_freq_reg
     
-;note number
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+8)*vdp_plane_width)+sound_test_xpos+0)*size_word)
     move.w  #tile_id_n, vdp_data
+    move.w  #tile_id_o, vdp_data
     move.w  #tile_id_t, vdp_data
+    move.w  #tile_id_e, vdp_data
     move.w  d2, vdp_data
-    move.w  d2, vdp_data
-    
-    move.w  #5, d3              ;loop counter
-    lea     ch_fm_1, a5
-    move.w  #tile_id_0, d0
-@write_note_num:
-    clr.l   d6
-    move.b  ch_note_name(a5), d6
-    M_buffer_as_BCD        d6, 2
-    M_write_buffer_to_display   2
-    
-    move.w  d2, vdp_data
-    move.w  d2, vdp_data
-    adda.w  #fm_ch_size, a5
-    dbf d3, @write_note_num
 
-;octave
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+9)*vdp_plane_width)+sound_test_xpos+0)*size_word)
     move.w  #tile_id_o, vdp_data
     move.w  #tile_id_c, vdp_data
     move.w  #tile_id_t, vdp_data
     move.w  d2, vdp_data
+
+    move.w  #tile_id_w, vdp_data
+    move.w  #tile_id_t, vdp_data
+    move.w  d2, vdp_data
+
+
+
+    rts
     
-    move.w  #5, d3              ;loop counter
-    lea     ch_fm_1, a5
+    
+;-------------------------
+@display_psg_channel_data:
     move.w  #tile_id_0, d0
-@write_note_octave:
+    move.w  #tile_id_blank, d2
+    move.w  d0, d3
+    lea     ch_psg_0, a5
+    
+    moveq  #3, d5   ;loop counter
+    @loop_each_psg_channel:
+    jsr     @display_single_psg_channel
+    adda.w  #psg_ch_size, a5
+    dbf d5, @loop_each_psg_channel
+    rts
+
+@display_single_psg_channel:
+    ;Write "PSG# "
+    move.w  #tile_id_p, vdp_data
+    move.w  #tile_id_s, vdp_data
+    move.w  #tile_id_g, vdp_data
+    addq    #1, d3
+    move.w  d3, vdp_data
+    move.w  d2, vdp_data
+
+    jmp @display_single_channel_common
+
+    
+@display_fm_channel_data:
+    move.w  #tile_id_0, d0
+    move.w  #tile_id_blank, d2
+    move.w  d0, d3
+    lea     ch_fm_1, a5
+    
+    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+5)*vdp_plane_width)+sound_test_xpos+0)*size_word)
+    
+    moveq  #5, d5   ;loop counter
+    @loop_each_fm_channel:
+    jsr     @display_single_fm_channel
+    adda.w  #fm_ch_size, a5
+    dbf d5, @loop_each_fm_channel
+    rts
+
+@display_single_fm_channel:
+    
+    ;Write "FM#  "
+    move.w  #tile_id_f, vdp_data
+    move.w  #tile_id_m, vdp_data
+    addq    #1, d3
+    move.w  d3, vdp_data
+    move.w  d2, vdp_data
+    move.w  d2, vdp_data
+
+@display_single_channel_common:
+    ;Write seqeuence index
+    clr.l   d6
+    move.w  ch_sequence_idx(a5), d4
+    move.l  ch_sequence_ptr(a5), a4
+    move.b  (a4, d4), d6    ;d6 = current entry of seq table
+    M_buffer_as_BCD    d6, 2
+    M_write_buffer_to_display 2
+    move.w  d2, vdp_data
+    move.w  d2, vdp_data
+
+    ;write freq reg:
+    clr.l   d6
+    move.w  ch_adj_freq(a5), d6
+    M_buffer_as_hex         d6, 3
+    M_write_buffer_to_display   3
+    move.w  d2, vdp_data
+    
+    ;write note number:
+    clr.l   d6
+    move.b  ch_note_name(a5), d6
+    M_buffer_as_BCD         d6, 2
+    M_write_buffer_to_display   2
+    move.w  d2, vdp_data
+    move.w  d2, vdp_data
+
+    ;write octave:
     clr.l   d6
     move.b  ch_note_octave(a5), d6
-    M_buffer_as_BCD        d6, 2
+    M_buffer_as_BCD         d6, 2
     M_write_buffer_to_display   2
+    move.w  d2, vdp_data
+    move.w  d2, vdp_data
+
+    ;write wait time
+    clr.l   d6
+    move.b  ch_wait_time(a5), d6
+    M_buffer_as_hex         d6, 2
+    M_write_buffer_to_display   2
+    move.w  d2, vdp_data
+
+    ;fill empty space
+    move.w  #(15-1), d7
+    @loop_empty_space1:
+    move.w  d2, vdp_data
+    dbf d7, @loop_empty_space1
     
+    ;mark the last visible tile
+    move.w  d0, vdp_data
+    
+    ;fill up the overscan
+    move.w  #(24-1), d7
+    @loop_empty_space2:
     move.w  d2, vdp_data
+    dbf d7, @loop_empty_space2
+    
+    ;add an extra line
+    move.w  #(64-1), d7
+    @loop_empty_space3:
     move.w  d2, vdp_data
-    adda.w  #fm_ch_size, a5
-    dbf d3, @write_note_octave
+    dbf d7, @loop_empty_space3
     rts
     
     modend

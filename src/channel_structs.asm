@@ -26,7 +26,7 @@ ch_channel_flags        rs.b    1
 
 ch_channel_num          rs.b    1   ;(0-2, 4-6 for FM, 0 for noise, 1-3 for PSG)
 
-ch_wait_time            rs.w    1   ;number of frames until next stream event
+ch_wait_time            rs.b    1   ;number of frames until next stream event
 ch_sequence_idx         rs.w    1   ;index into sequence table
 ch_stream_ptr           rs.l    1   ;pointer to stream of audio data
 ch_section_ptr          rs.l    1   ;pointer to section table
