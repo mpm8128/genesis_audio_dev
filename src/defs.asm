@@ -144,46 +144,10 @@ test_palette:
 ; The indices of each tile above. Once the tiles have been
 ; written to VRAM, the VDP refers to each tile by its index.
 ;==============================================================
-    RSRESET
-tile_id_blank	rs.b    1
+;tile_id_blank	equ 0x20
 
-tile_id_0       rs.b    1
-tile_id_1       rs.b    1
-tile_id_2       rs.b    1
-tile_id_3       rs.b    1
-tile_id_4       rs.b    1
-tile_id_5       rs.b    1
-tile_id_6       rs.b    1
-tile_id_7       rs.b    1
-tile_id_8       rs.b    1
-tile_id_9       rs.b    1
+;tile_id_0       equ 0x21
+;tile_id_a       equ 0x41
+;tile_id_a_lower equ 0x61
 
-tile_id_a       rs.b    1
-tile_id_b       rs.b    1
-tile_id_c       rs.b    1
-tile_id_d       rs.b    1
-tile_id_e       rs.b    1
-tile_id_f       rs.b    1
-tile_id_g       rs.b    1
-tile_id_h       rs.b    1
-tile_id_i       rs.b    1
-tile_id_j       rs.b    1
-tile_id_k       rs.b    1
-tile_id_l       rs.b    1
-tile_id_m       rs.b    1
-tile_id_n       rs.b    1
-tile_id_o       rs.b    1
-tile_id_p       rs.b    1
-tile_id_q       rs.b    1
-tile_id_r       rs.b    1
-tile_id_s       rs.b    1
-tile_id_t       rs.b    1
-tile_id_u       rs.b    1
-tile_id_v       rs.b    1
-tile_id_w       rs.b    1
-tile_id_x       rs.b    1
-tile_id_y       rs.b    1
-tile_id_z       rs.b    1
-
-tile_id_garb	rs.b    1
-tile_count		rs.b    0	; Last entry is just the count
+tile_count		equ 0x80	; Last entry is just the count
