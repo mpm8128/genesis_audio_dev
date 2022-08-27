@@ -22,10 +22,10 @@ set_cursor_plane:
     tst.b   d0
     bne     @plane_b
     ;else @plane_a
-    move.w  vram_addr_plane_a, cursor_plane
+    move.w  #vram_addr_plane_a, cursor_plane
     rts
 @plane_b:
-    move.w  vram_addr_plane_b, cursor_plane
+    move.w  #vram_addr_plane_b, cursor_plane
     rts
     
     
@@ -34,7 +34,7 @@ set_cursor_plane:
 ;y in d2.1
 set_cursor_to_xy:
     ;d0 - output command to vdp
-    move.l  vdp_cmd_vram_write, d0
+    move.l  #vdp_cmd_vram_write, d0
     
     ;calculate VRAM address
     lsl.l   #6, d2  ;addr = y<<6
@@ -49,11 +49,7 @@ set_cursor_to_xy:
     
     ;load low bits of plane into d0
     andi.w  #0x3FFF, d1
-    swap    d1  ;faster and does the same thing (?)
-    
-    ;lsl.l   #8, d1  ;have to do this twice because 
-    ;lsl.l   #8, d1  ;maximum shift is 8
-    
+    swap    d1      ; d1 << 16    
     or.l    d1, d0
     
     ;load high bits of plane into d0

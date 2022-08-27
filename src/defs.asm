@@ -154,6 +154,11 @@ test_palette:
 
 tile_count		equ 0x80	; Last entry is just the count
 
+    RSRESET
+st_init     rs.l    1
+st_normal   rs.l    1
+st_submenu  rs.l    1
+st_cleanup  rs.l    1
 
 ;======================================
 ; macro for handling menu inputs

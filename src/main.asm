@@ -183,11 +183,11 @@ INT_VInterrupt:
     addi.l  #1, frame_counter
     jsr get_controller_inputs
     
-    if  flag_DEBUG
-    jsr DEBUG_controller
-    endif
-    
-    jsr sound_test_menu
+;    if  flag_DEBUG
+;    jsr DEBUG_controller
+;    endif
+    jsr debug_menu
+;    jsr sound_test_menu
     
     jsr audio_driver
     

@@ -139,8 +139,7 @@ DEBUG_ctrl_ypos     equ     0x04
 
     even
 DEBUG_ctrl_string:
-    dc.w    's',  'a',  'c',  'b'
-    dc.w    'r',  'l',  'd',  'u'
+    dc.w    's', 'a', 'c', 'b', 'r', 'l', 'd', 'u'
 
 DEBUG_controller:
     ;----------------
@@ -150,8 +149,8 @@ DEBUG_controller:
     jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
     
 	; Write the font glyph tiles to VRAM
-	lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
-    jsr Copy_Tiles_to_VRAM
+	;lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
+    ;jsr Copy_Tiles_to_VRAM
     
     ;get ready to write to vdp
     lea     DEBUG_ctrl_string, a0   ;a0 = string start

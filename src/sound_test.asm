@@ -1,8 +1,10 @@
 ;sound test
 
+
     RSSET   0xFF0010
 sound_test_song_offset              rs.w    1
 sound_test_flag_display_changed     rs.b    1
+sound_test_menu_state               rs.w    1
 
 sound_test_channel_picker           rs.w    1
 empty                               rs.w    1
@@ -11,6 +13,49 @@ empty                               rs.w    1
 debug_space_num_words       rs.b    1
 debug_scratch_space         rs.w    4
 
+
+    module
+    even
+    
+@state_table:
+    dc.l    @init
+    dc.l    @normal
+    dc.l    @submenu
+    dc.l    @cleanup
+    
+@init:
+    jsr clear_screen
+    move.w  #st_normal, sound_test_menu_state
+    move.w  #0, d0
+    rts
+    
+@normal:
+    jsr @handle_input
+    jsr @update_display
+    move.w  #0, d0
+    rts
+    
+@submenu:
+    ;
+    move.w  #0, d0
+    rts
+    
+@cleanup:
+    move.w  #0, sound_test_song_offset
+    move.w  #st_init, sound_test_menu_state
+    move.w  #-1, d0
+    rts
+    
+sound_test_menu:    
+    move.w  sound_test_menu_state, d0
+    lea     @state_table, a0
+    adda.w  d0, a0
+    movea.l (a0), a0
+    jmp     (a0)
+             
+             
+             
+             
 M_mark_display_changed: macro
     move.b  #1, sound_test_flag_display_changed
     endm
@@ -71,15 +116,10 @@ M_write_buffer_to_display: macro num_digits
     dbf d7, @loop_write_number\@
     endm
 
-    module
+@exit_submenu:
+    move.w  #st_cleanup, sound_test_menu_state
+    rts
 
-    even
-sound_test_menu:    
-    jsr @handle_input
-    jmp @update_display
-    
-    ;rts
-     
 ;==================================== 
 ; handle input
 ;       SACB RLDU 
@@ -87,7 +127,7 @@ sound_test_menu:
 @handle_input:
     M_menu_handle_input sound_test_song_offset, (num_songs-song_record_size_bytes), song_record_size_bytes, &
                         sound_test_channel_picker, 0, 1, &
-                        null, @play_song, @play_silence, @play_song
+                        @exit_submenu, @play_song, @play_silence, @play_song
     rts
 
  
