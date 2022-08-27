@@ -77,7 +77,6 @@ M_write_buffer_to_display: macro num_digits
     even
 sound_test_menu:    
     jsr @handle_input
-    ;tst.w   (sound_test_flag_display_changed)
     jmp @update_display
     
     ;rts
@@ -165,10 +164,6 @@ num_st_digits   equ 2
     even
 st_digits   rs.w    num_st_digits
 
-
-
-
-
 @update_display:
     jsr @display_song_number
     jsr @display_table_header
@@ -202,64 +197,24 @@ st_digits   rs.w    num_st_digits
     swap    d6      ;d6 = 0(16), q(16)
     dbf     d7, @loop_BCD
 
-    ;M_save_SR
-    ;M_disable_interrupts
     move.w  #'0', d0          ;
     moveq   #(num_st_digits-1), d7  ;loop counter
     moveq   #0, d6                  ;index
-    
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+0)*vdp_plane_width)+sound_test_xpos+0)*size_word)
-    
-    ;in a1
-    ;lea     plane_A_buffer_start+((((sound_test_ypos+0)*vdp_plane_width)+sound_test_xpos+0)*size_word), a1
+        
+    SetVRAMWrite_xy vram_addr_plane_a, 0, 0
 
 @loop_write_number:
     move.w  (a0, d6), d1        ;d1 = digit
     add.w   d0, d1              ;d1 = tile number
-    ;move.w  d1, (a1)+           ;write to plane a buffer
     move.w  d1, vdp_data
     addi.w  #size_word, d6
     dbf d7, @loop_write_number
  
     rts
     
-@display_table_header:
-    move.w  #'0', d0
-    move.w  #' ', d2
-
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+4)*vdp_plane_width)+sound_test_xpos+0)*size_word)
-
-
-    move.w  #'c', vdp_data
-    move.w  #'h', vdp_data
-    move.w  #'a', vdp_data
-    move.w  #'n', vdp_data
-    move.w  d2, vdp_data
-
-    move.w  #'s', vdp_data
-    move.w  #'e', vdp_data
-    move.w  #'q', vdp_data
-    move.w  d2, vdp_data
-
-    move.w  #'f', vdp_data
-    move.w  #'q', vdp_data
-    move.w  d2, vdp_data
-    
-    move.w  #'n', vdp_data
-    move.w  #'o', vdp_data
-    move.w  #'t', vdp_data
-    move.w  #'e', vdp_data
-    move.w  d2, vdp_data
-
-    move.w  #'o', vdp_data
-    move.w  #'c', vdp_data
-    move.w  #'t', vdp_data
-    move.w  d2, vdp_data
-
-    move.w  #'w', vdp_data
-    move.w  #'t', vdp_data
-    move.w  d2, vdp_data
-
+@display_table_header:   
+    SetVRAMWrite_xy vram_addr_plane_a, 0, 4
+    M_print_string "chan seq fq note oct wt "
     rts
     
     
@@ -279,9 +234,7 @@ st_digits   rs.w    num_st_digits
 
 @display_single_psg_channel:
     ;Write "PSG# "
-    move.w  #'p', vdp_data
-    move.w  #'s', vdp_data
-    move.w  #'g', vdp_data
+    M_print_string "psg"
     addq    #1, d3
     move.w  d3, vdp_data
     move.w  d2, vdp_data
@@ -295,7 +248,7 @@ st_digits   rs.w    num_st_digits
     move.w  d0, d3
     lea     ch_fm_1, a5
     
-    SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+5)*vdp_plane_width)+sound_test_xpos+0)*size_word)
+    SetVRAMWrite_xy vram_addr_plane_a, 0, 5
     
     moveq  #5, d5   ;loop counter
     @loop_each_fm_channel:
@@ -307,8 +260,7 @@ st_digits   rs.w    num_st_digits
 @display_single_fm_channel:
     
     ;Write "FM#  "
-    move.w  #'f', vdp_data
-    move.w  #'m', vdp_data
+    M_print_string "FM"
     addq    #1, d3
     move.w  d3, vdp_data
     move.w  d2, vdp_data

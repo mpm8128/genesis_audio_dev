@@ -20,6 +20,12 @@ SetVRAMWrite: macro addr
 	move.l  #(vdp_cmd_vram_write)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
 	endm
 
+SetVRAMWrite_xy: macro plane, x, y
+addr = ((\plane)+((((\y)*vdp_plane_width)+(\x))*size_word))
+
+    move.l  #(vdp_cmd_vram_write)|((addr)&$3FFF)<<16|(addr)>>14, vdp_control
+    endm
+
 SetVRAMDMA: macro addr
 	move.l  #(vdp_cmd_vram_dma)|((\addr)&$3FFF)<<16|(\addr)>>14, vdp_control
 	endm
@@ -278,10 +284,10 @@ VDP_LoadRegisters:
 	dbra   d0, @CopyRegLp		; Decrement d0, and jump back to top of loop if d0 is still >= 0
 	rts
     
+    include 'tile_printing.asm'
     include 'audio_driver.asm'
     include 'controller_driver.asm'
     include 'sound_test.asm'
-    include 'tile_printing.asm'
     
 ;    org 0x08000
 test_sample_addr:
