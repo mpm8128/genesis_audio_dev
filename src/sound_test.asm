@@ -51,13 +51,22 @@ M_buffer_as_BCD: macro reg, num_digits
     ;trashes a0, d0, d1, d6, and d7
 M_write_buffer_to_display: macro num_digits
     lea     debug_scratch_space, a0
-    move.w  #tile_id_0, d0          ;
+    move.w  #'0', d0          ;
     moveq   #\num_digits-1, d7  ;loop counter
     
     moveq   #0, d6                          ;index
 @loop_write_number\@:
     move.w  (a0, d6.w), d1        ;d1 = digit
     add.w   d0, d1                 ;d1 = tile number
+    cmpi.w  #'9', d1
+    ble     @write_out\@
+    ;else (num > '9'), move to uppercase range
+    addi.w  #'A'-'9'-1, d1
+    nop
+    nop
+    nop
+    
+@write_out\@:
     move.w  d1, vdp_data
     addi.w  #size_word, d6
     dbf d7, @loop_write_number\@
@@ -195,7 +204,7 @@ st_digits   rs.w    num_st_digits
 
     ;M_save_SR
     ;M_disable_interrupts
-    move.w  #tile_id_0, d0          ;
+    move.w  #'0', d0          ;
     moveq   #(num_st_digits-1), d7  ;loop counter
     moveq   #0, d6                  ;index
     
@@ -215,51 +224,49 @@ st_digits   rs.w    num_st_digits
     rts
     
 @display_table_header:
-    move.w  #tile_id_0, d0
-    move.w  #tile_id_blank, d2
+    move.w  #'0', d0
+    move.w  #' ', d2
 
     SetVRAMWrite vram_addr_plane_a+((((sound_test_ypos+4)*vdp_plane_width)+sound_test_xpos+0)*size_word)
 
 
-    move.w  #tile_id_c, vdp_data
-    move.w  #tile_id_h, vdp_data
-    move.w  #tile_id_a, vdp_data
-    move.w  #tile_id_n, vdp_data
+    move.w  #'c', vdp_data
+    move.w  #'h', vdp_data
+    move.w  #'a', vdp_data
+    move.w  #'n', vdp_data
     move.w  d2, vdp_data
 
-    move.w  #tile_id_s, vdp_data
-    move.w  #tile_id_e, vdp_data
-    move.w  #tile_id_q, vdp_data
+    move.w  #'s', vdp_data
+    move.w  #'e', vdp_data
+    move.w  #'q', vdp_data
     move.w  d2, vdp_data
 
-    move.w  #tile_id_f, vdp_data
-    move.w  #tile_id_q, vdp_data
+    move.w  #'f', vdp_data
+    move.w  #'q', vdp_data
     move.w  d2, vdp_data
     
-    move.w  #tile_id_n, vdp_data
-    move.w  #tile_id_o, vdp_data
-    move.w  #tile_id_t, vdp_data
-    move.w  #tile_id_e, vdp_data
+    move.w  #'n', vdp_data
+    move.w  #'o', vdp_data
+    move.w  #'t', vdp_data
+    move.w  #'e', vdp_data
     move.w  d2, vdp_data
 
-    move.w  #tile_id_o, vdp_data
-    move.w  #tile_id_c, vdp_data
-    move.w  #tile_id_t, vdp_data
+    move.w  #'o', vdp_data
+    move.w  #'c', vdp_data
+    move.w  #'t', vdp_data
     move.w  d2, vdp_data
 
-    move.w  #tile_id_w, vdp_data
-    move.w  #tile_id_t, vdp_data
+    move.w  #'w', vdp_data
+    move.w  #'t', vdp_data
     move.w  d2, vdp_data
-
-
 
     rts
     
     
 ;-------------------------
 @display_psg_channel_data:
-    move.w  #tile_id_0, d0
-    move.w  #tile_id_blank, d2
+    move.w  #'0', d0
+    move.w  #' ', d2
     move.w  d0, d3
     lea     ch_psg_0, a5
     
@@ -272,9 +279,9 @@ st_digits   rs.w    num_st_digits
 
 @display_single_psg_channel:
     ;Write "PSG# "
-    move.w  #tile_id_p, vdp_data
-    move.w  #tile_id_s, vdp_data
-    move.w  #tile_id_g, vdp_data
+    move.w  #'p', vdp_data
+    move.w  #'s', vdp_data
+    move.w  #'g', vdp_data
     addq    #1, d3
     move.w  d3, vdp_data
     move.w  d2, vdp_data
@@ -283,8 +290,8 @@ st_digits   rs.w    num_st_digits
 
     
 @display_fm_channel_data:
-    move.w  #tile_id_0, d0
-    move.w  #tile_id_blank, d2
+    move.w  #'0', d0
+    move.w  #' ', d2
     move.w  d0, d3
     lea     ch_fm_1, a5
     
@@ -300,8 +307,8 @@ st_digits   rs.w    num_st_digits
 @display_single_fm_channel:
     
     ;Write "FM#  "
-    move.w  #tile_id_f, vdp_data
-    move.w  #tile_id_m, vdp_data
+    move.w  #'f', vdp_data
+    move.w  #'m', vdp_data
     addq    #1, d3
     move.w  d3, vdp_data
     move.w  d2, vdp_data

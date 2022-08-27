@@ -121,7 +121,7 @@ demo_init:
     jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
     
 	; Write the font glyph tiles to VRAM
-	lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
+	lea     Tiles_ctrl_char, a0    ; Move the address of the first graphics tile into a0
     jsr Copy_Tiles_to_VRAM
     
     ;init sound test

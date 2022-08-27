@@ -139,8 +139,8 @@ DEBUG_ctrl_ypos     equ     0x04
 
     even
 DEBUG_ctrl_string:
-    dc.w    tile_id_s, tile_id_a, tile_id_c, tile_id_b
-    dc.w    tile_id_r, tile_id_l, tile_id_d, tile_id_u
+    dc.w    's',  'a',  'c',  'b'
+    dc.w    'r',  'l',  'd',  'u'
 
 DEBUG_controller:
     ;----------------
@@ -206,8 +206,8 @@ DEBUG_controller_output_loop:
     bra @loop_continue
     
 @write_nothing:
-    move.w  #tile_id_blank, vdp_data    ;write blank to vdp
-    ;M_Write_Tile 0, 0, 0, 0, tile_id_blank
+    move.w  #' ', vdp_data    ;write blank to vdp
+    ;M_Write_Tile 0, 0, 0, 0, 'b'lank
     
 @loop_continue:
     lsr.b   #1, d0                  ;shift to next bit
