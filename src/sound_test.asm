@@ -5,6 +5,8 @@ sound_test_song_offset              rs.w    1
 sound_test_flag_display_changed     rs.b    1
 
 sound_test_channel_picker           rs.w    1
+empty                               rs.w    1
+
 
 debug_space_num_words       rs.b    1
 debug_scratch_space         rs.w    4
@@ -62,9 +64,6 @@ M_write_buffer_to_display: macro num_digits
     ble     @write_out\@
     ;else (num > '9'), move to uppercase range
     addi.w  #'A'-'9'-1, d1
-    nop
-    nop
-    nop
     
 @write_out\@:
     move.w  d1, vdp_data
@@ -86,67 +85,11 @@ sound_test_menu:
 ;       SACB RLDU 
 ;====================================
 @handle_input:
-    move.b  (p1_buttons_pressed), d7
-    or.b    (p2_buttons_pressed), d7
-    
-    move.w  (sound_test_song_offset), d0
-    move.w  (sound_test_channel_picker), d1
-    move.w  #(num_songs-song_record_size_bytes), d2
-    
-@check_up:
-    btst    #pad_button_up, d7
-    beq     @check_down
-    ;handle up
-    M_mark_display_changed
-    subi.w  #1, d1  ;decrement channel picker
-    bpl     @channel_selected
-    moveq   #0, d1  ;clip to 0
-    
-@check_down:
-    btst    #pad_button_down, d7
-    beq     @check_left
-    ;handle down
-    M_mark_display_changed
-    
-    ;write channel selection offset back to memory
-@channel_selected:
-    move.w  d1, (sound_test_channel_picker)
-    
-@check_left:
-    btst    #pad_button_left, d7
-    beq     @check_right
-    ;handle left
-    M_mark_display_changed    
-    subi.w  #8, d0     ;decrement offset
-    bpl     @song_selected
-    moveq   #0, d0     ;clip to 0
-    
-@check_right:
-    btst    #pad_button_right, d7
-    beq     @song_selected
-    ;handle right
-    M_mark_display_changed
-    addi.w  #8, d0      ;increment offset
-    cmp.w   d2, d0      ;d6 - num_songs
-    ble     @song_selected
-    move.w  d2, d0      ;clip to num_songs
-    
-    ;write song selection offset back to memory
-@song_selected:    
-    move.w  d0, (sound_test_song_offset)
-    
-;@check_start
-    ; btst    0x7, d7
-;@check_a:
-    btst    #pad_button_a, d7
-    bne     @play_song
-;@check_b
-    btst    #pad_button_b, d7
-    bne     @play_silence
-;@check_c
-    btst    #pad_button_c, d7
-    bne     @play_song
+    M_menu_handle_input sound_test_song_offset, (num_songs-song_record_size_bytes), song_record_size_bytes, &
+                        sound_test_channel_picker, 0, 1, &
+                        null, @play_song, @play_silence, @play_song
     rts
+
  
 @play_silence:
     move.w  #offset_silence, d0

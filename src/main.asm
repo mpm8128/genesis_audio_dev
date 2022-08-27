@@ -288,6 +288,7 @@ VDP_LoadRegisters:
     include 'audio_driver.asm'
     include 'controller_driver.asm'
     include 'sound_test.asm'
+    include 'debug_menu.asm'
     
 ;    org 0x08000
 test_sample_addr:

@@ -1,3 +1,5 @@
+null    equ     0x0
+
 ;==============================================================
 ; INITIAL VDP REGISTER VALUES
 ;==============================================================
@@ -151,3 +153,99 @@ test_palette:
 ;tile_id_a_lower equ 0x61
 
 tile_count		equ 0x80	; Last entry is just the count
+
+
+;======================================
+; macro for handling menu inputs
+;   ideally invoked inside its own function
+;
+;   menu_h_offset, menu_v_offset - RAM, word-long
+;   menu_h_max, menu_v_max - immediate, word-long
+;   callbacks - immediate, wordlong
+;
+;=====================================
+M_menu_handle_input: macro  menu_h_offset, menu_h_max, menu_h_step_size, &
+                            menu_v_offset, menu_v_max, menu_v_step_size, &
+                            start_callback, a_callback, b_callback, c_callback
+@handle_inputs_start\@:
+    ;get controllers
+    move.b  (p1_buttons_pressed), d7
+    or.b    (p2_buttons_pressed), d7
+    
+    ;load offsets and max entries
+    move.w  (\menu_h_offset), d0
+    move.w  (\menu_v_offset), d1
+    move.w  #\menu_h_max, d2
+    move.w  #\menu_v_max, d3
+    
+@check_up\@:
+    btst    #pad_button_up, d7
+    beq     @check_down\@
+    ;handle up
+    subi.w  #menu_v_step_size, d1  ;decrement v
+    bpl     @write_v_offset\@
+    moveq   #0, d1  ;clip to 0
+@check_down\@:
+    btst    #pad_button_down, d7
+    beq     @check_left\@
+    ;handle down
+    addi.w  #menu_v_step_size, d1 
+    ble     @write_v_offset\@
+    move.w  d3, d1 ;clip to max v
+@write_v_offset\@:
+    move.w  d1, (\menu_v_offset)
+    
+@check_left\@:
+    btst    #pad_button_left, d7
+    beq     @check_right\@
+    ;handle left
+    subi.w  #menu_h_step_size, d0     ;decrement h
+    bpl     @write_h_offset\@
+    moveq   #0, d0     ;clip to 0
+@check_right\@:
+    btst    #pad_button_right, d7
+    beq     @write_h_offset\@
+    ;handle right
+    addi.w  #menu_h_step_size, d0      ;increment h
+    cmp.w   d2, d0
+    ble     @write_h_offset\@
+    move.w  d2, d0      ;clip to max h
+@write_h_offset\@:
+    move.w  d0, (\menu_h_offset)
+ 
+    ;a0 = null
+    clr.l   d2
+@check_start\@:
+    btst    #pad_button_start, d7
+    beq     @check_a\@
+    move.w  #\start_callback, d2
+    bra     @handle_callback\@
+@check_a\@:
+    btst    #pad_button_a, d7
+    beq     @check_b\@
+    move.w  #\a_callback, d2
+    bra     @handle_callback\@
+@check_b\@:
+    btst    #pad_button_b, d7
+    beq     @check_c\@
+    move.w  #\b_callback, d2
+    bra     @handle_callback\@
+
+@check_c\@:
+    btst    #pad_button_c, d7
+    beq     @handle_inputs_end\@    ;no buttons pressed
+    move.w  #\c_callback, d2
+    bra     @handle_callback\@
+
+@handle_callback\@:
+    ;null check
+    tst.l   d2
+    beq     @handle_inputs_end\@
+    ;else jump to callback fn
+    movea.l   d2, a0
+    jsr     (a0)
+@handle_inputs_end\@:
+    endm
+
+
+
