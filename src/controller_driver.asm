@@ -12,6 +12,9 @@ p2_buttons_held         rs.b    1
 p2_buttons_pressed      rs.b    1
 p2_buttons_released     rs.b    1
 
+controller_debug_state  rs.w    1
+controller_debug_timer  rs.w    1
+
 ;================================================
 ;   Parallel ports
 ;================================================
@@ -137,20 +140,70 @@ DEBUG_ctrl_1_xpos   equ     0x04
 DEBUG_ctrl_2_xpos   equ     0x14
 DEBUG_ctrl_ypos     equ     0x04
 
+    module
     even
-DEBUG_ctrl_string:
-    dc.w    's', 'a', 'c', 'b', 'r', 'l', 'd', 'u'
+controller_menu:
+    move.w  controller_debug_state, d0
+    lea     @state_table, a0
+    adda.w  d0, a0
+    movea.l (a0), a0
+    jmp     (a0)
+    
+@state_table:
+    dc.l    @init
+    dc.l    @normal
+    dc.l    @submenu
+    dc.l    @cleanup
+    
+@init:
+    jsr clear_screen
 
-DEBUG_controller:
-    ;----------------
-    ;DEBUG controller init
+	; Write the font glyph tiles to VRAM
+	lea     Tiles_ctrl_char, a0    ; Move the address of the first graphics tile into a0
+    jsr Copy_Tiles_to_VRAM
     
     lea test_palette, a0        ;
     jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
+
+    ;10 second timer
+    move.w  #0x258, controller_debug_timer
+    move.w  #st_normal, controller_debug_state
+    move.w  #0, d0
+    rts
     
-	; Write the font glyph tiles to VRAM
-	;lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
-    ;jsr Copy_Tiles_to_VRAM
+@normal:
+    jsr @handle_timer
+    jsr @update_display
+    move.w  #0, d0
+    rts
+    
+@submenu:
+    ;
+    move.w  #0, d0
+    rts
+    
+@cleanup:
+    move.w  #st_init, controller_debug_state
+    move.w  #-1, d0
+    rts
+    
+DEBUG_ctrl_string:
+    dc.w    's', 'a', 'c', 'b', 'r', 'l', 'd', 'u'
+
+@handle_timer:
+    move.w  controller_debug_timer, d0
+    subi.w  #1, d0
+    tst.w   d0
+    bne @not_zero
+    ;else timer is zero
+    move.w  #st_cleanup, controller_debug_state
+    
+@not_zero:
+    move.w  d0, controller_debug_timer
+    rts
+
+
+@update_display:
     
     ;get ready to write to vdp
     lea     DEBUG_ctrl_string, a0   ;a0 = string start
@@ -185,6 +238,14 @@ DEBUG_controller:
     lea p2_buttons_released, a1
     jsr DEBUG_controller_output_loop
 
+    ;write timer
+    SetVRAMWrite_xy     vram_addr_plane_a, 1, 1
+    
+    move.w  controller_debug_timer, d6
+    M_buffer_as_hex     d6, 3
+    M_write_buffer_to_display   3
+    
+
     rts
     
 ;expects address of button data in a1
@@ -214,9 +275,4 @@ DEBUG_controller_output_loop:
     
     rts
     
-    
-    
-    
-    
-    
-    
+    modend

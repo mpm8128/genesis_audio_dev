@@ -136,40 +136,6 @@ demo_init:
     
     rts
     
-; ;==============================================================
-; ;   demo_tiles_init
-; ;   demonstrates basic tile display
-; ;==============================================================
-; demo_tiles_init:
-    ; lea test_palette, a0        ;
-    ; jsr Copy_Palette_to_CRAM    ;copy test_palette to CRAM
-    
-	; ; Write the font glyph tiles to VRAM
-	; lea     TileBlank, a0    ; Move the address of the first graphics tile into a0
-    ; jsr Copy_Tiles_to_VRAM
-    
-    ; ; Write tile positions to plane A VRAM
-	; SetVRAMWrite vram_addr_plane_a+(((text_pos_y*vdp_plane_width)+text_pos_x)*size_word)
-	; move.w #tile_id_blank, vdp_data		; 
-    ; ; move.w #tile_id_a, vdp_data		
-    ; ; move.w #tile_id_g, vdp_data		
-    ; ; move.w #tile_id_r, vdp_data		
-    ; ; move.w #tile_id_blank, vdp_data		
-    ; ; move.w #tile_id_1, vdp_data
-    ; ; move.w #tile_id_4, vdp_data
-    ; move.w #tile_id_a, vdp_data		; 
-    ; move.w #tile_id_blank, vdp_data		; 
-    ; move.w #tile_id_m, vdp_data		; 
-    ; move.w #tile_id_y, vdp_data		; 
-    ; move.w #tile_id_s, vdp_data		; 
-    ; move.w #tile_id_t, vdp_data		; 
-    ; move.w #tile_id_e, vdp_data		; 
-    ; move.w #tile_id_r, vdp_data		; 
-    ; move.w #tile_id_y, vdp_data		; 
-
-    ; rts
-    
-
     
 ;==============================================================
 ; INTERRUPT ROUTINES
@@ -285,10 +251,10 @@ VDP_LoadRegisters:
 	rts
     
     include 'tile_printing.asm'
+    include 'debug_menu.asm'
     include 'audio_driver.asm'
     include 'controller_driver.asm'
     include 'sound_test.asm'
-    include 'debug_menu.asm'
     
 ;    org 0x08000
 test_sample_addr:

@@ -7,11 +7,6 @@ sound_test_flag_display_changed     rs.b    1
 sound_test_menu_state               rs.w    1
 
 sound_test_channel_picker           rs.w    1
-empty                               rs.w    1
-
-
-debug_space_num_words       rs.b    1
-debug_scratch_space         rs.w    4
 
 
     module
@@ -60,65 +55,8 @@ M_mark_display_changed: macro
     move.b  #1, sound_test_flag_display_changed
     endm
 
-    ;trashes a0, d7, input reg, and d1
-M_buffer_as_hex: macro reg, num_digits
-    lea     debug_scratch_space, a0
-    move.b  #\num_digits, debug_space_num_words  ;save to memory
-    move.w  #\num_digits-1, d7                   ;loop counter
 
-@convert_loop\@:
-    move.w  \reg, d1        ;copy to d1
-    andi.w  #0x0F, d1       ;mask low nybble
-    lsl.w   #1, d7          ;word-align index
-    move.w  d1, (a0, d7.w) ;write to memory
-    lsr.w   #1, d7          ;un-word-align
 
-    lsr.w   #4, \reg
-    dbf d7, @convert_loop\@
-    endm
-
-    ;trashes a0, d7, and input reg
-M_buffer_as_BCD: macro reg, num_digits
-    lea     debug_scratch_space, a0
-    move.b  #\num_digits, debug_space_num_words  ;save to memory
-    move.w  #\num_digits-1, d7                   ;loop counter
-    
-@convert_bcd_loop\@:
-    divu    #10, \reg        ;reg = r(16), q(16)
-    swap    \reg             ;reg = q(16), r(16)
-    lsl.w   #1, d7          ;word-align index
-    move.w  \reg, (a0, d7.w) ;write to memory
-    lsr.w   #1, d7          ;un-word-align
-
-    move.w  #0, \reg         ;clear remainder
-    swap    \reg             ;restore quotient
-    dbf d7, @convert_bcd_loop\@
-    endm
-
-    ;trashes a0, d0, d1, d6, and d7
-M_write_buffer_to_display: macro num_digits
-    lea     debug_scratch_space, a0
-    move.w  #'0', d0          ;
-    moveq   #\num_digits-1, d7  ;loop counter
-    
-    moveq   #0, d6                          ;index
-@loop_write_number\@:
-    move.w  (a0, d6.w), d1        ;d1 = digit
-    add.w   d0, d1                 ;d1 = tile number
-    cmpi.w  #'9', d1
-    ble     @write_out\@
-    ;else (num > '9'), move to uppercase range
-    addi.w  #'A'-'9'-1, d1
-    
-@write_out\@:
-    move.w  d1, vdp_data
-    addi.w  #size_word, d6
-    dbf d7, @loop_write_number\@
-    endm
-
-@exit_submenu:
-    move.w  #st_cleanup, sound_test_menu_state
-    rts
 
 ;==================================== 
 ; handle input
@@ -131,6 +69,9 @@ M_write_buffer_to_display: macro num_digits
     rts
 
  
+@exit_submenu:
+    move.w  #st_cleanup, sound_test_menu_state
+    rts
 @play_silence:
     move.w  #offset_silence, d0
 @play_song:
