@@ -177,7 +177,7 @@ INT_Null:
 	rte
     
     include 'defs.asm'
-    include 'tile_test.asm'
+    include 'tiles/ascii_tiles.asm'
     include 'mem_map.asm'
 
 ;==============================================================
