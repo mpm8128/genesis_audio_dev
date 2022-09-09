@@ -251,10 +251,13 @@ VDP_LoadRegisters:
 	rts
     
     include 'tile_printing.asm'
-    include 'debug_menu.asm'
     include 'audio_driver.asm'
-    include 'controller_driver.asm'
+    
+    ;debug menus
+    include 'debug_menu.asm'
+    include 'controller_driver.asm' ;also controller driver
     include 'sound_test.asm'
+    include 'tile_test.asm'
     
 ;    org 0x08000
 test_sample_addr:

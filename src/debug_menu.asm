@@ -1,6 +1,8 @@
 ;debug_menu.asm
 
 
+debug_menu_options  equ 3
+
     RSSET 0x00FF3000
 empty                               rs.w    1
 debug_space_num_words       rs.b    1
@@ -82,6 +84,7 @@ M_write_buffer_to_display: macro num_digits
 @menu_table:
     dc.l    sound_test_menu
     dc.l    controller_menu
+    dc.l    tile_test_menu
 
 
 clear_screen:
@@ -152,8 +155,8 @@ clear_screen:
     SetVRAMWrite_xy vram_addr_plane_a, 1, 5
     M_print_string " Controller Test"
     
-    ;SetVRAMWrite_xy vram_addr_plane_a, 2, 6
-    ;M_print_string "Palette Test"
+    SetVRAMWrite_xy vram_addr_plane_a, 1, 6
+    M_print_string " Tile Test"
     
     moveq   #0, d0  ;set plane a
     jsr set_cursor_plane
@@ -170,7 +173,7 @@ clear_screen:
 
 @handle_input:
     M_menu_handle_input empty,0,0, &
-                        debug_menu_v_offset,(size_long*(2-1)),size_long, &
+                        debug_menu_v_offset,(size_long*(debug_menu_options-1)),size_long, &
                         null,@mark_submenu,null,@mark_submenu
 
     rts

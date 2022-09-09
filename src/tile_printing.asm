@@ -29,10 +29,10 @@ set_cursor_plane:
     rts
     
     
-;trashes d0
 ;x in d1.1
 ;y in d2.1
 set_cursor_to_xy:
+    movem.l d0-d2, -(sp)
     ;d0 - output command to vdp
     move.l  #vdp_cmd_vram_write, d0
     
@@ -60,6 +60,7 @@ set_cursor_to_xy:
     
     ;write to vdp
     move.l  d0, vdp_control
+    movem.l (sp)+, d0-d2
     rts
 
 ;prints at cursor

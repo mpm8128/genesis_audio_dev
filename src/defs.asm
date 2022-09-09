@@ -194,7 +194,8 @@ M_menu_handle_input: macro  menu_h_offset, menu_h_max, menu_h_step_size, &
     btst    #pad_button_down, d7
     beq     @check_left\@
     ;handle down
-    addi.w  #menu_v_step_size, d1 
+    addi.w  #menu_v_step_size, d1
+    cmp.w   d3, d1
     ble     @write_v_offset\@
     move.w  d3, d1 ;clip to max v
 @write_v_offset\@:
