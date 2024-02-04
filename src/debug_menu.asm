@@ -88,19 +88,23 @@ M_write_buffer_to_display: macro num_digits
 
 
 clear_screen:
-    move.w  ' ', d2
+    move.w  0, d2
     SetVRAMWrite_xy vram_addr_plane_a, 0, 0
     move.w  #vdp_plane_height-1, d7
 @clear_row:
     move.w  #vdp_plane_width-1, d6
 @write_blank:    
-    M_print_char ' '
+    M_print_char 0
     dbf d6, @write_blank
     dbf d7, @clear_row
     rts
     
 @init:
+    lea Tile_ascii_start, a0
+    jsr Copy_Tiles_to_VRAM
+
     jsr clear_screen
+    
     move.w  #st_normal, debug_menu_state
     move.w  #0, d0
     rts

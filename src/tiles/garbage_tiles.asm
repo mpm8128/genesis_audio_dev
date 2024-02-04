@@ -1,3 +1,6 @@
+garbage_tiles_num:
+    dc.w    18
+garbage_tiles:
 	dc.l	$C6996E86	;  Tile: 0
 	dc.l	$C6996E86
 	dc.l	$C6996E88
@@ -142,4 +145,3 @@
 	dc.l	$FF6F8000
 	dc.l	$CC6F6000
 	dc.l	$C6CF6000
-

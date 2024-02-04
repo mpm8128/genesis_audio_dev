@@ -1,6 +1,8 @@
-;test tiledefs
+Tile_ascii_num:
+    dc.w    128
 
 ;0x00
+Tile_ascii_start:
 Tiles_ctrl_char: ;non-printing
     rept 0x20
     rept 8

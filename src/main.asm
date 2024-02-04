@@ -178,6 +178,7 @@ INT_Null:
     
     include 'defs.asm'
     include 'tiles/ascii_tiles.asm'
+    include 'tiles/garbage_tiles.asm'
     include 'mem_map.asm'
 
 ;==============================================================
