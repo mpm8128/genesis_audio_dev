@@ -72,8 +72,8 @@ Tile_percent:
     dc.l    0x00000000
 
 Tile_ampersand:
-    dc.l    0x00001100
-    dc.l    0x00010010
+    dc.l    0x01100000
+    dc.l    0x10010000
     dc.l    0x00100000
     dc.l    0x01010000
     dc.l    0x10001010
