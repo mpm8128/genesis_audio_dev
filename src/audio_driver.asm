@@ -1324,3 +1324,9 @@ M_load_inst: macro inst_name
     include 'songs/aro2.asm'
     include 'songs/cza18.asm'
     ;include 'songs/mission_briefing.asm'
+	
+	even
+	test_wav:
+	incbin '/samples/untitled.wav'
+	
+	even

@@ -166,7 +166,7 @@ st_cleanup  rs.l    1
 ;
 ;   menu_h_offset, menu_v_offset - RAM, word-long
 ;   menu_h_max, menu_v_max - immediate, word-long
-;   callbacks - immediate, wordlong
+;   callbacks - immediate, long-long
 ;
 ;=====================================
 M_menu_handle_input: macro  menu_h_offset, menu_h_max, menu_h_step_size, &
@@ -224,23 +224,23 @@ M_menu_handle_input: macro  menu_h_offset, menu_h_max, menu_h_step_size, &
 @check_start\@:
     btst    #pad_button_start, d7
     beq     @check_a\@
-    move.w  #\start_callback, d2
+    move.l  #\start_callback, d2
     bra     @handle_callback\@
 @check_a\@:
     btst    #pad_button_a, d7
     beq     @check_b\@
-    move.w  #\a_callback, d2
+    move.l  #\a_callback, d2
     bra     @handle_callback\@
 @check_b\@:
     btst    #pad_button_b, d7
     beq     @check_c\@
-    move.w  #\b_callback, d2
+    move.l  #\b_callback, d2
     bra     @handle_callback\@
 
 @check_c\@:
     btst    #pad_button_c, d7
     beq     @handle_inputs_end\@    ;no buttons pressed
-    move.w  #\c_callback, d2
+    move.l  #\c_callback, d2
     bra     @handle_callback\@
 
 @handle_callback\@:
