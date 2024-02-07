@@ -273,7 +273,7 @@ VDP_LoadRegisters:
     
 ;    org 0x08000
 test_sample_addr:
-    incbin 'samples/untitled.wav',0x27 ;start address
+    incbin 'samples/testing.wav',0x40 ;start address
     dc.w    0xFFFF
     
 ; A label defining the end of ROM so we can compute the total size.

@@ -80,7 +80,7 @@ audio_driver:
 ;   pauses the z80 and sets up the 2612 for FM writes
 ;============================================================================
 handle_all_fm_start:
-    M_request_Z80_bus
+    ;M_request_Z80_bus
     
     rts
     
@@ -89,7 +89,7 @@ handle_all_fm_start:
 ;============================================================================
 handle_all_fm_end:
     ;unpause the z80
-    M_return_Z80_bus
+    ;M_return_Z80_bus
     rts
 
 ;============================================================================
@@ -105,38 +105,19 @@ handle_all_fm_channels:
 @loop_fm_ch:
     btst  #0, ch_channel_flags(a5)  ;if channel is disabled
     beq @next_channel               ;   skip it
-                                    ;else
-                                    
-    M_split_by_channel_type @ignore, &
-                            @ignore, &
-                            @temp_disable_dac, &
-                            @ignore
-    @temp_disable_dac:
-    ;disable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x00, d1    ;disable it
-    jsr write_register_opn2_ctrl    ;write to chip
-    @ignore:
-    
+	
     jsr handle_stream               ;   handle stream events
     jsr handle_vibrato
     jsr handle_pitchbend            ;   handle pitchbend
     jsr handle_automation           
-    jsr fm_driver_write_to_chip
+	
+    M_split_by_channel_type @next_channel, &
+							@write_to_chip, & ;if it's actually an FM channel, write to chip
+							@next_channel, &
+							@next_channel	
+@write_to_chip:
+	jsr fm_driver_write_to_chip
 
-    M_split_by_channel_type @ignore2, @ignore2, @dac2, @ignore2
-    @dac2:
-    ;re-enable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x80, d1    ;enable it
-    jsr write_register_opn2_ctrl    ;write to chip
-
-    ;set address to DAC so the z80 doesn't have to
-    move.b  #0x2A, d0        ;DAC data register
-    jsr set_address_opn2    ;write to chip
-
-    @ignore2:
-    
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
@@ -526,7 +507,7 @@ stream_stop:
     
     M_split_by_channel_type stream_psg_stop, &
                             stream_fm_stop, &
-                            return, &
+                            stream_dac_stop, &
                             return
 
 ;--------------------------------------------------------------
@@ -550,6 +531,20 @@ stream_fm_stop:
 return:
     rts
     
+	
+;--------------------------------------------------------------
+;   stream_fm_stop
+;   code: sc_stop
+;--------------------------------------------------------------
+stream_dac_stop:
+	move.b 	ch_channel_num(a5), d2
+	
+	move.b  #0, d0					;send the "stop" code to the z80
+	jsr		dac_send_signal_code
+	jsr		quick_mute_FM_channel
+	rts
+	
+	
 ;==============================================================
 ;   stream_loop
 ;   code: sc_loop
@@ -597,7 +592,7 @@ stream_keyon:
 
     M_split_by_channel_type stream_psg_keyon, &
                             stream_fm_keyon, &
-                            read_stream, &
+                            stream_dac_keyon, &
                             read_stream
                             
 stream_keyon_cleanup:
@@ -626,6 +621,17 @@ stream_fm_keyon:
     move.w  (a0, d6.w), d1                  ;d1.w = frequency number
     bra stream_keyon_cleanup
     
+;--------------------------------------------------------------
+;   stream_dac_keyon
+;   code: sc_keyon
+;--------------------------------------------------------------
+
+stream_dac_keyon:
+	jsr dac_enable_dac			;ensure it's enabled
+	move.b #1, d0				;send "play" code
+	jsr dac_send_signal_code
+	jmp read_stream
+	
 ;==============================================================
 ;   stream_keyoff
 ;   code: sc_keyoff
@@ -1362,6 +1368,11 @@ M_load_inst: macro inst_name
     dc.l    \inst_name
     endm
     
+M_play_sample: macro sample_ptr, duration
+	M_load_inst \sample_ptr
+	M_play_note 0, 0, \duration
+	endm
+	
     include 'instrument_defs.asm'
     
     include 'songs/demo_section_table.asm'

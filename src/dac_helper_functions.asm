@@ -15,9 +15,21 @@ z80_sample_offset   equ 0x00A00026
 ;
 ;====================================
 
-dac_init_dac:
-    ;enable dac
-    rts
+dac_enable_dac:
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x80, d1    ;enable it
+    jsr write_register_opn2_ctrl    ;write to chip
+
+    ;set address to DAC so the z80 doesn't have to
+    ;move.b  #0x2A, d0        ;DAC data register
+    ;jsr set_address_opn2    ;write to chip
+	rts
+	
+dac_disable_dac:
+    move.b  #0x2B, d0    ;DAC enable register
+    move.b  #0x00, d1    ;disable it
+    jsr write_register_opn2_ctrl    ;write to chip
+	rts
 
 ;====================================
 ;   send signal code to the z80
@@ -26,7 +38,9 @@ dac_init_dac:
 ;   d0.b -  one-byte signal code
 ;====================================
 dac_send_signal_code:
+	M_request_Z80_bus
     move.b  d0, (z80_mailbox_addr)
+	M_return_Z80_bus
     rts
 
 ;====================================
@@ -37,6 +51,7 @@ dac_send_signal_code:
 ;           sample to point the z80 at
 ;====================================
 dac_send_sample_address:
+	M_request_Z80_bus
     ;extract bank number and write to z80
     lsl.l   #1, d0  ;move bit 15 into upper word
     swap    d0      ;swap upper/lower words
@@ -60,6 +75,7 @@ dac_send_sample_address:
     lsr.w   #8, d0
     move.b  d0, (z80_sample_offset+1)
     
+	M_return_Z80_bus
     rts
     
     

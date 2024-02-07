@@ -170,14 +170,14 @@ write_register_opn2_side1:
     ;subi.b  #1, d2          ;zero-index for the chip
     add.b	d2, d0          ;Channel select. 
 write_register_opn2_ctrl:
-    ;M_request_Z80_bus
+    M_request_Z80_bus
     lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, (a0)
     nop
     M_wait_for_busy_clear
     move.b  d1, $1(a0)
-    ;M_return_Z80_bus
+    M_return_Z80_bus
     rts
     
     ;d0 = register
@@ -189,19 +189,21 @@ setup_write_register_opn2_side2:
     ;fallthrough to side 2
     
 write_register_opn2_side2:
-    ;M_request_Z80_bus
+    M_request_Z80_bus
     lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, $2(a0)
     nop
     M_wait_for_busy_clear
     move.b  d1, $3(a0)
-    ;M_return_Z80_bus
+    M_return_Z80_bus
     rts
     
 ;;
 set_address_opn2:
-    lea opn2_addr_1, a0
+    M_request_Z80_bus
+	lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, (a0)
+	M_return_Z80_bus
     rts

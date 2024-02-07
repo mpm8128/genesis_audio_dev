@@ -28,10 +28,10 @@ pcm_test_seq_table:
 
 @play_test_sample:
 	dc.b	sc_set_ch_type, ch_type_dac
-
-	M_load_inst	test_sample_addr	;as DAC, hopefully
 	
-	dc.b	sc_signal_z80, 0x01
-	M_play_rest 	254
-	dc.b 	sc_end_section
+	M_load_inst test_sample_addr
+	
+	M_play_sample test_sample_addr, 360
+	
+	dc.b 	sc_stop
 	modend
