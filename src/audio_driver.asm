@@ -211,6 +211,7 @@ stream_jumptable:
     dc.l    stream_vibrato
     dc.l    stream_send_z80_signal
     dc.l    stream_send_z80_address
+	dc.l	stream_set_channel_type
     dc.l    stream_struct_write
     dc.l    stream_set_auto
     
@@ -230,10 +231,34 @@ sc_pitchbend    rs.b        1
 sc_vibrato      rs.b        1
 sc_signal_z80   rs.b        1
 sc_sample_addr  rs.b        1
+sc_set_ch_type	rs.b		1
 sc_struct_write rs.b        1
 sc_set_auto     rs.b        1
 num_sc          rs.b        0
-    
+	
+;==============================================================
+;   stream_set_channel_type
+;		sc_set_ch_type
+;
+;parameters:
+;	a5 - channel pointer
+;   a4 - stream pointer
+;       b 	channel type
+;			00: PSG
+;			01: FM
+;			10: DAC/PCM
+;			11: ???
+;==============================================================
+stream_set_channel_type:
+	move.b	(a4)+, d0					;extract the channel type from the stream
+	lsl.b 	#2, d0						;move the bits into position (bits 2 and 3)
+	andi.b 	#0x0C, d0					;mask on the bits we want to keep
+	move.b 	ch_channel_flags(a5), d1	;
+	andi.b	#0xF3, d1					;mask off the current channel type
+	or.b	d0, d1						;set the new channel type
+	move.b	d1, ch_channel_flags(a5) 	;write back to struct
+	bra read_stream
+	
 ;==============================================================
 ;   stream_load_first_section
 ;
@@ -442,7 +467,7 @@ stream_load_instrument:
     movea.l (a4)+, a1           ;a1 = instrument pointer
     M_split_by_channel_type stream_psg_load_instrument, &
                             stream_fm_load_instrument, &
-                            read_stream, &
+                            stream_dac_load_instrument, &
                             read_stream
     
 ;--------------------------------------------------------------
@@ -464,6 +489,27 @@ stream_psg_load_instrument:
 stream_fm_load_instrument:
     jsr load_FM_instrument
     bra read_stream
+	
+;--------------------------------------------------------------
+;   stream_dac_load_instrument
+;   code: sc_load_inst
+;
+;   loads an PCM sample from the specified address
+;		and sends it to the z80 for playback
+;--------------------------------------------------------------
+stream_dac_load_instrument:
+	;check that this is channel 6
+	move.b	ch_channel_num(a5), d0
+	cmp.b	#6, d0
+	bne bad_stream_code				;crash if not
+	
+	;send the sample to the z80
+	move.l a1, d0				;load the sample address into d0.l
+	jsr dac_send_sample_address
+	
+	;set any required things for the instrument struct itself
+	
+	bra read_stream
 
 ;==============================================================
 ;   stream_stop
@@ -1077,6 +1123,7 @@ offset_demo         rs.l    song_record_size
 offset_cza3         rs.l    song_record_size
 offset_aro2         rs.l    song_record_size
 offset_cza18        rs.l    song_record_size
+offset_pcm_test		rs.l	song_record_size
 ;offset_agr14        rs.l    2
 ;offset_mb           rs.l    2
 num_songs           rs.l    0
@@ -1090,6 +1137,7 @@ song_table:
     dc.l    cza3_channel_table,     cza3_section_table      ;,     0
     dc.l    aro2_channel_table,     aro2_section_table
     dc.l    cza18_channel_table,    cza18_section_table     ;,    0
+	dc.l	pcm_test_channel_table,	pcm_test_section_table	;,	0
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
@@ -1323,10 +1371,6 @@ M_load_inst: macro inst_name
     include 'songs/cza13.asm'
     include 'songs/aro2.asm'
     include 'songs/cza18.asm'
-    ;include 'songs/mission_briefing.asm'
-	
-	even
-	test_wav:
-	incbin '/samples/untitled.wav'
-	
+	include 'songs/pcm_test.asm'
+    ;include 'songs/mission_briefing.asm'	
 	even

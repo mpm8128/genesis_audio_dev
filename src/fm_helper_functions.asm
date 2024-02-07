@@ -22,6 +22,7 @@ FM_init:
     move.b  #0, d2
     jsr keyoff_FM_channel
     jsr quick_mute_FM_channel
+	
     move.b  #1, d2
     jsr keyoff_FM_channel
     jsr quick_mute_FM_channel
@@ -60,7 +61,7 @@ quick_mute_FM_channel:
 @skip_mod_data:
     move.b  #0xB4, d0               ;stereo/am/fm mod register
     andi.b  #0x3F, d1               ;mask off stereo bits
-    jsr write_register_opn2
+    jsr write_register_opn2_w_channel
     rts
     
     
@@ -80,7 +81,7 @@ quick_unmute_FM_channel:
 @skip_mod_data:
     move.b  #0xB4, d0               ;stereo/am/fm mod register
     ;ori.b   #0xC0, d1               ;turn on both stereo bits
-    jsr write_register_opn2
+    jsr write_register_opn2_w_channel
     rts
     
 ;============================================================================
@@ -161,7 +162,7 @@ load_FM_instrument:
 ;============================================================================
 write_register_opn2:
     move.b  ch_channel_num(a5), d2   ;d2 = channel number
-
+write_register_opn2_w_channel:
     btst	#2, d2          ;check bit to see which side of the 2612 to write to
     bne.b	setup_write_register_opn2_side2
     ;else fallthrough to side 1/ctrl
