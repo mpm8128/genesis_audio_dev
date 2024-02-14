@@ -1,5 +1,5 @@
 Tile_ascii_num:
-    dc.w    128
+    dc.w   0x84
 
 ;0x00
 Tile_ascii_start:
@@ -664,114 +664,115 @@ Tile_backtick:
     dc.l    0x00000000
 
 ;the alphabet again
-Tile_a_lower:
-    dc.l    0x00010000
-    dc.l    0x00101000
-    dc.l    0x00101000
-    dc.l    0x01000100
-    dc.l    0x01111100
-    dc.l    0x10000010
-    dc.l    0x10000010
+Tile_a_lower:    
+	dc.l    0x00000000
     dc.l    0x00000000
-    
+    dc.l    0x01111000
+    dc.l    0x10000100
+    dc.l    0x10000100
+    dc.l    0x10000110
+    dc.l    0x01111010
+    dc.l    0x00000000
+
+	
 Tile_b_lower:
-    dc.l    0x11111100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x11111100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x11111100
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10111000
+    dc.l    0x11000100
+    dc.l    0x10000100
+    dc.l    0x11000100
+    dc.l    0x10111000
     dc.l    0x00000000
     
 Tile_c_lower:
-    dc.l    0x00111100
-    dc.l    0x01000010
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x01111100
     dc.l    0x10000000
     dc.l    0x10000000
     dc.l    0x10000000
-    dc.l    0x01000010
-    dc.l    0x00111100
+    dc.l    0x01111100
     dc.l    0x00000000
 
 Tile_d_lower:
-    dc.l    0x11111000
+    dc.l    0x00000100
+    dc.l    0x00000100
+    dc.l    0x01110100
+    dc.l    0x10001100
     dc.l    0x10000100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000100
-    dc.l    0x11111000
+    dc.l    0x10001100
+    dc.l    0x01110100
     dc.l    0x00000000
     
 Tile_e_lower:
-    dc.l    0x11111110
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x11111000
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x11111110
     dc.l    0x00000000
-    
-Tile_f_lower:
-    dc.l    0x11111110
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x11111000
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x10000000
     dc.l    0x00000000
-
-Tile_g_lower:
-    dc.l    0x00111100
-    dc.l    0x01000010
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x10001110
-    dc.l    0x01000010
-    dc.l    0x00111010
-    dc.l    0x00000000
-    
-Tile_h_lower:
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x11111110
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x00000000
-    
-Tile_i_lower:
-    dc.l    0x11111110
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x11111110
-    dc.l    0x00000000
-
-Tile_j_lower:
-    dc.l    0x00000110
-    dc.l    0x00000010
-    dc.l    0x00000010
-    dc.l    0x00000010
-    dc.l    0x00000010
+    dc.l    0x01111000
     dc.l    0x10000100
+    dc.l    0x11111100
+    dc.l    0x10000000
     dc.l    0x01111000
     dc.l    0x00000000
     
+Tile_f_lower:
+    dc.l    0x00011100
+    dc.l    0x00100010
+    dc.l    0x00100000
+    dc.l    0x11111000
+    dc.l    0x00100000
+    dc.l    0x00100000
+    dc.l    0x00100000
+    dc.l    0x00000000
+
+Tile_g_lower:
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x01111000
+    dc.l    0x10000100
+    dc.l    0x10001100
+    dc.l    0x01110100
+    dc.l    0x00000100
+    dc.l    0x01111000
+    
+Tile_h_lower:
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10111000
+    dc.l    0x11001100
+    dc.l    0x10000100
+    dc.l    0x10000100
+    dc.l    0x00000000
+    
+Tile_i_lower:
+    dc.l    0x00000000
+    dc.l    0x00100000
+    dc.l    0x00000000
+    dc.l    0x00100000
+    dc.l    0x00100000
+    dc.l    0x00100000
+    dc.l    0x00100000
+    dc.l    0x00000000
+
+Tile_j_lower:
+    dc.l    0x00000000
+    dc.l    0x00001000
+    dc.l    0x00000000
+    dc.l    0x00001000
+    dc.l    0x00001000
+    dc.l    0x00001000
+    dc.l    0x01001000
+    dc.l    0x00110000
+    
 Tile_k_lower:
-    dc.l    0x10000010
-    dc.l    0x10000100
-    dc.l    0x10001000
-    dc.l    0x11110000
-    dc.l    0x10001000
-    dc.l    0x10000100
-    dc.l    0x10000010
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10010000
+    dc.l    0x11100000
+    dc.l    0x10100000
+    dc.l    0x10010000
     dc.l    0x00000000
 
 Tile_l_lower:
@@ -781,147 +782,147 @@ Tile_l_lower:
     dc.l    0x10000000
     dc.l    0x10000000
     dc.l    0x10000000
-    dc.l    0x11111110
+    dc.l    0x01000000
     dc.l    0x00000000
 
 Tile_m_lower:
-    dc.l    0x10000010
-    dc.l    0x11000110
-    dc.l    0x10101010
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10100100
+    dc.l    0x11011010
     dc.l    0x10010010
-    dc.l    0x10000010
-    dc.l    0x10000010
+    dc.l    0x10010010
     dc.l    0x10000010
     dc.l    0x00000000
     
 Tile_n_lower:
-    dc.l    0x10000010
-    dc.l    0x11000010
-    dc.l    0x10100010
-    dc.l    0x10010010
-    dc.l    0x10001010
-    dc.l    0x10000110
-    dc.l    0x10000010
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10110000
+    dc.l    0x11001000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x10001000
     dc.l    0x00000000
     
 Tile_o_lower:
-    dc.l    0x00111000
-    dc.l    0x01000100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x01000100
-    dc.l    0x00111000
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x01110000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x01110000
     dc.l    0x00000000
     
 Tile_p_lower:
-    dc.l    0x11111100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x11111100
-    dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x10000000
     dc.l    0x00000000
+    dc.l    0x00000000
+	dc.l    0x10111000
+    dc.l    0x11000100
+    dc.l    0x11000100
+    dc.l    0x10111000
+    dc.l    0x10000000
+    dc.l    0x10000000
     
 Tile_q_lower:
-    dc.l    0x00111000
-    dc.l    0x01000100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10001010
-    dc.l    0x01000100
-    dc.l    0x00111010
     dc.l    0x00000000
+    dc.l    0x00000000
+	dc.l    0x01110100
+    dc.l    0x10001100
+    dc.l    0x10001100
+    dc.l    0x01110100
+    dc.l    0x00000100
+    dc.l    0x00000100
     
 Tile_r_lower:
-    dc.l    0x11111100
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x11111100
-    dc.l    0x10001000
-    dc.l    0x10000100
-    dc.l    0x10000010
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10111000
+    dc.l    0x11000000
+    dc.l    0x10000000
+    dc.l    0x10000000
+    dc.l    0x10000000
     dc.l    0x00000000
 
 Tile_s_lower:
-    dc.l    0x01111110
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x01111000
     dc.l    0x10000000
-    dc.l    0x10000000
-    dc.l    0x01111100
-    dc.l    0x00000010
-    dc.l    0x00000010
-    dc.l    0x11111100
+    dc.l    0x01110000
+    dc.l    0x00001000
+    dc.l    0x11110000
     dc.l    0x00000000
     
 Tile_t_lower:
-    dc.l    0x11111110
+    dc.l    0x00000000
     dc.l    0x00010000
     dc.l    0x00010000
+    dc.l    0x01111100
     dc.l    0x00010000
     dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
+    dc.l    0x00001000
     dc.l    0x00000000
 
 Tile_u_lower:
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x01111100
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x01110100
     dc.l    0x00000000
     
 Tile_v_lower:
-    dc.l    0x10000010
-    dc.l    0x10000010
-    dc.l    0x01000100
-    dc.l    0x01000100
-    dc.l    0x00101000
-    dc.l    0x00101000
-    dc.l    0x00010000
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10001000
+    dc.l    0x10001000
+    dc.l    0x01010000
+    dc.l    0x01010000
+    dc.l    0x00100000
     dc.l    0x00000000
     
 Tile_w_lower:
-    dc.l    0x10000010
+    dc.l    0x00000000
+    dc.l    0x00000000
     dc.l    0x10000010
     dc.l    0x10010010
     dc.l    0x10010010
-    dc.l    0x10101010
-    dc.l    0x10101010
-    dc.l    0x11000110
+    dc.l    0x01010110
+    dc.l    0x00101010
     dc.l    0x00000000
     
 Tile_x_lower:
-    dc.l    0x10000010
-    dc.l    0x01000100
-    dc.l    0x00101000
-    dc.l    0x00010000
-    dc.l    0x00101000
-    dc.l    0x01000100
-    dc.l    0x10000010
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x10001000
+    dc.l    0x01010000
+    dc.l    0x00100000
+    dc.l    0x01010000
+    dc.l    0x10001000
     dc.l    0x00000000
     
 Tile_y_lower:
-    dc.l    0x10000010
-    dc.l    0x01000100
-    dc.l    0x00101000
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
-    dc.l    0x00010000
+	dc.l    0x00000000
     dc.l    0x00000000
+    dc.l    0x10000100
+    dc.l    0x01001000
+    dc.l    0x00110000
+    dc.l    0x00100000
+    dc.l    0x01000000
+    dc.l    0x10000000
 
 Tile_z_lower:
-    dc.l    0x11111110
-    dc.l    0x00000100
-    dc.l    0x00001000
+    dc.l    0x00000000
+    dc.l    0x00000000
+    dc.l    0x11111000
     dc.l    0x00010000
     dc.l    0x00100000
     dc.l    0x01000000
-    dc.l    0x11111110
+    dc.l    0x11111000
     dc.l    0x00000000
 ;0x7B
 Tile_left_brace:
