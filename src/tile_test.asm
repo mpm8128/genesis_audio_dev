@@ -56,13 +56,15 @@ tile_test_menu:
 ;=========================================================  
 @init:
     ; Write the font glyph tiles to VRAM
-    move.l  Tile_ascii_start, tile_test_tile_set
-    move.w  #0, palette_test_which_palette
+    ;move.l  Tile_ascii_start, tile_test_tile_set
     
     jsr clear_screen
 
     move.w  #0, tile_test_tileset_table_offset
-    move.w  #st_normal, tile_test_menu_state
+    move.w  #-1, tile_test_old_offset
+    move.w  #0, palette_test_which_palette
+    move.w  #-1, palette_test_old_palette
+	move.w  #st_normal, tile_test_menu_state
     move.w  #0, d0	;return 0
     rts
     
@@ -71,6 +73,8 @@ tile_test_menu:
 ;		normal operation of this menu
 ;=========================================================
 @normal:
+    jsr @handle_input
+
 	;check if something changed (do we need to clear the screen?)
 	move.w (tile_test_tileset_table_offset), d0
 	cmp.w  (tile_test_old_offset), d0
@@ -87,13 +91,10 @@ tile_test_menu:
 	move.w (tile_test_tileset_table_offset), (tile_test_old_offset)
 	move.w (palette_test_which_palette), (palette_test_old_palette)
 
-	@no_changes:
-	
-    jsr @handle_input
     jsr @update_display
 	
-	
-    move.w  #0, d0
+	@no_changes:
+    move.w  #0, d0	;return 0
     rts
     
 ;=========================================================
@@ -189,8 +190,7 @@ tile_test_menu:
 ;
 ;=========================================================
 @load_tileset:
-    SetVRAMWrite 0x0080
-    move.l  #0x40800000, vdp_control
+    SetVRAMWrite 0x0000
 	lsl.w   #3, d0  ;8x - size of each tile
     subi.w  #1, d0  ;set up d0 as a loop counter
 @loop:

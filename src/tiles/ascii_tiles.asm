@@ -1,10 +1,10 @@
 Tile_ascii_num:
-    dc.w   0x84
+    dc.w   0x80
 
 ;0x00
 Tile_ascii_start:
 Tiles_ctrl_char: ;non-printing
-    rept 0x20
+    rept 32
     rept 8
     dc.l    0x00000000
     endr
