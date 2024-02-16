@@ -22,6 +22,7 @@ FM_init:
     move.b  #0, d2
     jsr keyoff_FM_channel
     jsr quick_mute_FM_channel
+	
     move.b  #1, d2
     jsr keyoff_FM_channel
     jsr quick_mute_FM_channel
@@ -60,7 +61,7 @@ quick_mute_FM_channel:
 @skip_mod_data:
     move.b  #0xB4, d0               ;stereo/am/fm mod register
     andi.b  #0x3F, d1               ;mask off stereo bits
-    jsr write_register_opn2
+    jsr write_register_opn2_w_channel
     rts
     
     
@@ -80,7 +81,7 @@ quick_unmute_FM_channel:
 @skip_mod_data:
     move.b  #0xB4, d0               ;stereo/am/fm mod register
     ;ori.b   #0xC0, d1               ;turn on both stereo bits
-    jsr write_register_opn2
+    jsr write_register_opn2_w_channel
     rts
     
 ;============================================================================
@@ -161,7 +162,7 @@ load_FM_instrument:
 ;============================================================================
 write_register_opn2:
     move.b  ch_channel_num(a5), d2   ;d2 = channel number
-
+write_register_opn2_w_channel:
     btst	#2, d2          ;check bit to see which side of the 2612 to write to
     bne.b	setup_write_register_opn2_side2
     ;else fallthrough to side 1/ctrl
@@ -169,14 +170,14 @@ write_register_opn2_side1:
     ;subi.b  #1, d2          ;zero-index for the chip
     add.b	d2, d0          ;Channel select. 
 write_register_opn2_ctrl:
-    ;M_request_Z80_bus
+    M_request_Z80_bus
     lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, (a0)
     nop
     M_wait_for_busy_clear
     move.b  d1, $1(a0)
-    ;M_return_Z80_bus
+    M_return_Z80_bus
     rts
     
     ;d0 = register
@@ -188,19 +189,21 @@ setup_write_register_opn2_side2:
     ;fallthrough to side 2
     
 write_register_opn2_side2:
-    ;M_request_Z80_bus
+    M_request_Z80_bus
     lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, $2(a0)
     nop
     M_wait_for_busy_clear
     move.b  d1, $3(a0)
-    ;M_return_Z80_bus
+    M_return_Z80_bus
     rts
     
 ;;
 set_address_opn2:
-    lea opn2_addr_1, a0
+    M_request_Z80_bus
+	lea opn2_addr_1, a0
     M_wait_for_busy_clear
     move.b  d0, (a0)
+	M_return_Z80_bus
     rts

@@ -149,16 +149,10 @@ INT_VInterrupt:
     addi.l  #1, frame_counter
     jsr get_controller_inputs
     
-;    if  flag_DEBUG
-;    jsr DEBUG_controller
-;    endif
     jsr debug_menu
-;    jsr sound_test_menu
     
     jsr audio_driver
-    
-    ;jsr DMA_plane_A
-    
+        
     M_enable_interrupts
     rte
 
@@ -167,11 +161,28 @@ INT_HInterrupt:
 	; Doesn't do anything in this demo
 	rte
 
+Int_Bus_Error:
+	stop #0x2700
+	rte
+	
+Int_Addr_Error:
+	stop #0x2700
+	rte
+
+Int_Illegal_Inst:
+	stop #0x2700
+	rte
+	
+Int_Div_Zero:
+	stop #0x2700
+	rte
+
 ; Exception interrupt - called if an error has occured
 CPU_Exception:
 	; Just halt the CPU if an error occurred
 	stop   #0x2700
-    
+    rte
+	
 ; NULL interrupt - for interrupts we don't care about
 INT_Null:
 	rte
@@ -262,7 +273,7 @@ VDP_LoadRegisters:
     
 ;    org 0x08000
 test_sample_addr:
-    incbin 'songs/voice_test.wav',0x27 ;start address
+    incbin 'samples/testing.wav',0x40 ;start address
     dc.w    0xFFFF
     
 ; A label defining the end of ROM so we can compute the total size.

@@ -178,7 +178,7 @@ clear_screen:
 @handle_input:
     M_menu_handle_input empty,0,0, &
                         debug_menu_v_offset,(size_long*(debug_menu_options-1)),size_long, &
-                        null,@mark_submenu,null,@mark_submenu
+                        null, @mark_submenu, null, @mark_submenu
 
     rts
 

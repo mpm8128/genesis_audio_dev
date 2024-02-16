@@ -15,10 +15,10 @@ ROM_START:
 ;==============================================================
 	dc.l   0x00FFE000			; Initial stack pointer value
 	dc.l   code_start		    ; Start of program
-	dc.l   CPU_Exception 		; Bus error
-	dc.l   CPU_Exception 		; Address error
-	dc.l   CPU_Exception 		; Illegal instruction
-	dc.l   CPU_Exception 		; Division by zero
+	dc.l   Int_Bus_Error 		; Bus error
+	dc.l   Int_Addr_Error 		; Address error
+	dc.l   Int_Illegal_Inst		; Illegal instruction
+	dc.l   Int_Div_Zero 		; Division by zero
 	dc.l   CPU_Exception 		; CHK CPU_Exception
 	dc.l   CPU_Exception 		; TRAPV CPU_Exception
 	dc.l   CPU_Exception 		; Privilege violation

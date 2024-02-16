@@ -100,7 +100,7 @@ playback_setup:
     LD  (IX), 0x2A      ;select DAC register
     
 playback_loop:
-    LD  A, 0x03         ;magic number for slowing
+    LD  A, 7         ;magic number for slowing
                         ;down the PCM driver
                         ;see timing spreadsheet for more details
                         

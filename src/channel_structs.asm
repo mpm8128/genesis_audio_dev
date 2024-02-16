@@ -1,3 +1,9 @@
+	RSRESET
+ch_type_psg		rs.b 	1
+ch_type_fm		rs.b 	1
+ch_type_dac		rs.b	1
+ch_type_err		rs.b	1
+
 ;==============================================================
 ;   Channel Structure
 ;==============================================================

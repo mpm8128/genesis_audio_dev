@@ -80,7 +80,7 @@ audio_driver:
 ;   pauses the z80 and sets up the 2612 for FM writes
 ;============================================================================
 handle_all_fm_start:
-    M_request_Z80_bus
+    ;M_request_Z80_bus
     
     rts
     
@@ -89,7 +89,7 @@ handle_all_fm_start:
 ;============================================================================
 handle_all_fm_end:
     ;unpause the z80
-    M_return_Z80_bus
+    ;M_return_Z80_bus
     rts
 
 ;============================================================================
@@ -105,38 +105,19 @@ handle_all_fm_channels:
 @loop_fm_ch:
     btst  #0, ch_channel_flags(a5)  ;if channel is disabled
     beq @next_channel               ;   skip it
-                                    ;else
-                                    
-    M_split_by_channel_type @ignore, &
-                            @ignore, &
-                            @temp_disable_dac, &
-                            @ignore
-    @temp_disable_dac:
-    ;disable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x00, d1    ;disable it
-    jsr write_register_opn2_ctrl    ;write to chip
-    @ignore:
-    
+	
     jsr handle_stream               ;   handle stream events
     jsr handle_vibrato
     jsr handle_pitchbend            ;   handle pitchbend
     jsr handle_automation           
-    jsr fm_driver_write_to_chip
+	
+    M_split_by_channel_type @next_channel, &
+							@write_to_chip, & ;if it's actually an FM channel, write to chip
+							@next_channel, &
+							@next_channel	
+@write_to_chip:
+	jsr fm_driver_write_to_chip
 
-    M_split_by_channel_type @ignore2, @ignore2, @dac2, @ignore2
-    @dac2:
-    ;re-enable DAC
-    move.b  #0x2B, d0    ;DAC enable register
-    move.b  #0x80, d1    ;enable it
-    jsr write_register_opn2_ctrl    ;write to chip
-
-    ;set address to DAC so the z80 doesn't have to
-    move.b  #0x2A, d0        ;DAC data register
-    jsr set_address_opn2    ;write to chip
-
-    @ignore2:
-    
 @next_channel:
     adda.w  #fm_ch_size, a5         ;next channel
     dbf d7, @loop_fm_ch             ;loop end
@@ -211,6 +192,7 @@ stream_jumptable:
     dc.l    stream_vibrato
     dc.l    stream_send_z80_signal
     dc.l    stream_send_z80_address
+	dc.l	stream_set_channel_type
     dc.l    stream_struct_write
     dc.l    stream_set_auto
     
@@ -230,10 +212,34 @@ sc_pitchbend    rs.b        1
 sc_vibrato      rs.b        1
 sc_signal_z80   rs.b        1
 sc_sample_addr  rs.b        1
+sc_set_ch_type	rs.b		1
 sc_struct_write rs.b        1
 sc_set_auto     rs.b        1
 num_sc          rs.b        0
-    
+	
+;==============================================================
+;   stream_set_channel_type
+;		sc_set_ch_type
+;
+;parameters:
+;	a5 - channel pointer
+;   a4 - stream pointer
+;       b 	channel type
+;			00: PSG
+;			01: FM
+;			10: DAC/PCM
+;			11: ???
+;==============================================================
+stream_set_channel_type:
+	move.b	(a4)+, d0					;extract the channel type from the stream
+	lsl.b 	#2, d0						;move the bits into position (bits 2 and 3)
+	andi.b 	#0x0C, d0					;mask on the bits we want to keep
+	move.b 	ch_channel_flags(a5), d1	;
+	andi.b	#0xF3, d1					;mask off the current channel type
+	or.b	d0, d1						;set the new channel type
+	move.b	d1, ch_channel_flags(a5) 	;write back to struct
+	bra read_stream
+	
 ;==============================================================
 ;   stream_load_first_section
 ;
@@ -442,7 +448,7 @@ stream_load_instrument:
     movea.l (a4)+, a1           ;a1 = instrument pointer
     M_split_by_channel_type stream_psg_load_instrument, &
                             stream_fm_load_instrument, &
-                            read_stream, &
+                            stream_dac_load_instrument, &
                             read_stream
     
 ;--------------------------------------------------------------
@@ -464,6 +470,27 @@ stream_psg_load_instrument:
 stream_fm_load_instrument:
     jsr load_FM_instrument
     bra read_stream
+	
+;--------------------------------------------------------------
+;   stream_dac_load_instrument
+;   code: sc_load_inst
+;
+;   loads an PCM sample from the specified address
+;		and sends it to the z80 for playback
+;--------------------------------------------------------------
+stream_dac_load_instrument:
+	;check that this is channel 6
+	move.b	ch_channel_num(a5), d0
+	cmp.b	#6, d0
+	bne bad_stream_code				;crash if not
+	
+	;send the sample to the z80
+	move.l a1, d0				;load the sample address into d0.l
+	jsr dac_send_sample_address
+	
+	;set any required things for the instrument struct itself
+	
+	bra read_stream
 
 ;==============================================================
 ;   stream_stop
@@ -480,7 +507,7 @@ stream_stop:
     
     M_split_by_channel_type stream_psg_stop, &
                             stream_fm_stop, &
-                            return, &
+                            stream_dac_stop, &
                             return
 
 ;--------------------------------------------------------------
@@ -504,6 +531,20 @@ stream_fm_stop:
 return:
     rts
     
+	
+;--------------------------------------------------------------
+;   stream_fm_stop
+;   code: sc_stop
+;--------------------------------------------------------------
+stream_dac_stop:
+	move.b 	ch_channel_num(a5), d2
+	
+	move.b  #0, d0					;send the "stop" code to the z80
+	jsr		dac_send_signal_code
+	jsr		quick_mute_FM_channel
+	rts
+	
+	
 ;==============================================================
 ;   stream_loop
 ;   code: sc_loop
@@ -551,7 +592,7 @@ stream_keyon:
 
     M_split_by_channel_type stream_psg_keyon, &
                             stream_fm_keyon, &
-                            read_stream, &
+                            stream_dac_keyon, &
                             read_stream
                             
 stream_keyon_cleanup:
@@ -580,6 +621,17 @@ stream_fm_keyon:
     move.w  (a0, d6.w), d1                  ;d1.w = frequency number
     bra stream_keyon_cleanup
     
+;--------------------------------------------------------------
+;   stream_dac_keyon
+;   code: sc_keyon
+;--------------------------------------------------------------
+
+stream_dac_keyon:
+	jsr dac_enable_dac			;ensure it's enabled
+	move.b #1, d0				;send "play" code
+	jsr dac_send_signal_code
+	jmp read_stream
+	
 ;==============================================================
 ;   stream_keyoff
 ;   code: sc_keyoff
@@ -1077,6 +1129,7 @@ offset_demo         rs.l    song_record_size
 offset_cza3         rs.l    song_record_size
 offset_aro2         rs.l    song_record_size
 offset_cza18        rs.l    song_record_size
+offset_pcm_test		rs.l	song_record_size
 ;offset_agr14        rs.l    2
 ;offset_mb           rs.l    2
 num_songs           rs.l    0
@@ -1090,6 +1143,7 @@ song_table:
     dc.l    cza3_channel_table,     cza3_section_table      ;,     0
     dc.l    aro2_channel_table,     aro2_section_table
     dc.l    cza18_channel_table,    cza18_section_table     ;,    0
+	dc.l	pcm_test_channel_table,	pcm_test_section_table	;,	0
     ;dc.l    agr14_channel_table, agr14_section_table
     ;dc.l    mission_briefing_parts_table, 0
     
@@ -1314,6 +1368,11 @@ M_load_inst: macro inst_name
     dc.l    \inst_name
     endm
     
+M_play_sample: macro sample_ptr, duration
+	M_load_inst \sample_ptr
+	M_play_note 0, 0, \duration
+	endm
+	
     include 'instrument_defs.asm'
     
     include 'songs/demo_section_table.asm'
@@ -1323,4 +1382,6 @@ M_load_inst: macro inst_name
     include 'songs/cza13.asm'
     include 'songs/aro2.asm'
     include 'songs/cza18.asm'
-    ;include 'songs/mission_briefing.asm'
+	include 'songs/pcm_test.asm'
+    ;include 'songs/mission_briefing.asm'	
+	even
